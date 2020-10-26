@@ -1,0 +1,15 @@
+include (parse_arguments)
+
+function (require_compiler_version_ge)
+  set (options)
+  set (one_value_options COMPILER VERSION)
+  set (multi_value_options)
+  set (required_options COMPILER VERSION)
+  _parse_arguments (ARG "${options}" "${one_value_options}" "${multi_value_options}" "${required_options}" ${ARGN})
+
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "${ARG_COMPILER}")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "${ARG_VERSION}")
+      message (FATAL_ERROR "${PROJECT_NAME} requires compiler ${CMAKE_CXX_COMPILER_ID} to be of version >= ${ARG_VERSION} (got ${CMAKE_CXX_COMPILER_VERSION}).")
+    endif()
+  endif()
+endfunction()

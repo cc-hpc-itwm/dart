@@ -1,0 +1,15 @@
+#!/bin/sh
+
+for machinefile in "$@"
+do	
+  for node in `(cat ${machinefile} | uniq)`
+  do
+    for proc in  "gspc-rifd" "orchestrator" "agent" "drts-kernel" "gspc-logging-demultiplexer"
+    do 
+      echo "killing proc ${proc}  on node $node"
+      ssh $node " kill -9 \$(ps aux | grep ${proc} | grep -v grep | grep -v ssh | awk '{ print $2 }' | tr '\n' ' ')" 2>/dev/null &
+    done
+  done
+done  
+wait
+

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cat $HOME/.local/share/carme/tmp-files-$SLURM_JOBID/ssh_$SLURM_JOBID/ssh_config_$SLURM_JOBID | grep -i -e port -e "host "
+
+

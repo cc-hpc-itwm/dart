@@ -1,0 +1,276 @@
+<defun name="dart">   
+  <struct name="task_result">
+    <field name="task_id" type="string"/>
+    <field name="location" type="string"/>
+    <field name="host" type="string"/>
+    <field name="worker" type="string"/>
+    <field name="start_time" type="string"/>
+    <field name="duration" type="float"/>
+    <field name="error" type="string"/>
+    <field name="success" type="bytearray"/>
+  </struct>
+ 
+  <struct name="config">
+    <field name="python_home" type="string"/>
+    <field name="path_to_python_module" type="string"/>
+    <field name="module" type="string"/>
+    <field name="method" type="string"/>
+    <field name="output_directory" type="string"/>
+  </struct>
+ 
+  <struct name="location_and_parameters">
+    <field name="task_id" type="string"/>
+    <field name="location" type="string"/>
+    <field name="task_parameters" type="string"/>
+  </struct>
+  
+  <struct name="remaining_tasks_request">
+    <field name="value" type="unsigned long"/>
+    <field name="response_id" type="string"/>
+  </struct>
+  
+  <struct name="task_result_request">
+    <field name="value" type="task_result"/>
+    <field name="response_id" type="string"/>
+  </struct>
+
+  <in name="config" type="config" place="config"/>
+  <in name="parameter_list" type="list" place="parameter_list"/>
+  <in name="n_tasks" type="unsigned long" place="n_tasks"/>
+  <out name="task_result" type="task_result" place="task_result"/>
+  <net>
+    <place name="config" type="config"/>
+    <place name="parameter_list" type="list"/>
+    <place name="n_tasks" type="unsigned long" put_token="true"/>
+    <place name="task_result" type="task_result"/>
+    
+    <place name="location_and_parameters" type="location_and_parameters"/>
+    <transition name="gen_individual_parameters">
+      <defun>
+        <inout name="parameter_list" type="list"/>
+        <out name="location_and_parameters" type="location_and_parameters"/>
+          <expression>
+             ${location_and_parameters} := stack_top (${parameter_list});
+             ${parameter_list} := stack_pop (${parameter_list});           
+          </expression>
+          <condition>
+             !stack_empty (${parameter_list})        
+          </condition>
+      </defun>
+      <connect-inout port="parameter_list" place="parameter_list"/>
+      <connect-out port="location_and_parameters" place="location_and_parameters"/>
+    </transition>
+                       
+    <place name="task_completed" type="control"/>
+    <transition name="run_task_at_location">
+      <defun>
+        <properties name="fhg">
+          <properties name="drts">
+            <properties name="require">
+              <property key="dynamic_requirement">"${location_and_parameters.location}"</property>
+            </properties>
+          </properties>
+        </properties> 
+        <in name="config" type="config"/>
+        <in name="location_and_parameters" type="location_and_parameters"/>
+        <out name="task_result" type="task_result"/>
+        <out name="task_completed" type="control"/>
+        <module name="execute_python_task" 
+          function="python_task ( config
+                                , location_and_parameters
+                                , task_result
+                                , task_completed
+                                )"
+          pass_context="true">
+          <cinclude href="cpp/task_interface.hpp"/>
+          <cinclude href="utils/get_public_worker_name.hpp"/>
+          <cinclude href="boost/asio/ip/host_name.hpp"/>
+          <cinclude href="boost/filesystem.hpp"/>
+          <cinclude href="chrono"/>
+          <code><![CDATA[                        
+            auto worker (dart::get_public_worker_name
+                            (*(_pnetc_context->workers().begin()))
+                         );
+                      
+             std::string host (boost::asio::ip::host_name());
+              
+             auto start = std::chrono::high_resolution_clock::now();
+            
+             auto unix_timestamp = std::chrono::seconds (std::time(NULL));
+             unsigned long unix_timestamp_ms = std::chrono::milliseconds (unix_timestamp).count();
+            
+             if (!boost::filesystem::exists (config.python_home)) 
+             {
+               auto end = std::chrono::high_resolution_clock::now();
+               std::chrono::duration<double> elapsed = end - start;
+                
+               task_result = pnetc::type::task_result::task_result
+                 ( location_and_parameters.task_id
+                 , location_and_parameters.location
+                 , host
+                 , worker
+                 , std::to_string (unix_timestamp_ms)
+                 , elapsed.count()
+                 , "The folder \"" + config.python_home + "\" does not exist on the host " + host
+                 , std::vector<char>()
+                 );              
+             }
+             else if (!boost::filesystem::exists (config.python_home + "/lib")) 
+             {
+               auto end = std::chrono::high_resolution_clock::now();
+               std::chrono::duration<double> elapsed = end - start;
+                
+               task_result = pnetc::type::task_result::task_result
+                 ( location_and_parameters.task_id
+                 , location_and_parameters.location
+                 , host
+                 , worker
+                 , std::to_string (unix_timestamp_ms)
+                 , elapsed.count()
+                 , "The folder \"" + config.python_home + "/lib\" does not exist on the host " + host
+                 , std::vector<char>()
+                 );              
+             }
+             else
+             {
+               boost::filesystem::recursive_directory_iterator endit;
+               std::string python_library;
+                
+               for ( boost::filesystem::recursive_directory_iterator it (config.python_home + "/lib")
+                   ; it != endit
+                   ; ++it
+                   )
+               {
+                 if ( boost::filesystem::is_regular_file (*it) 
+                    && it->path().extension() == ".so"
+                    && (it->path().stem().string().find ("libpython") != std::string::npos)
+                    )
+                 {  python_library = it->path().string();
+                    break;
+                 }
+               }
+                
+               if (python_library.empty())
+               {
+                 auto end = std::chrono::high_resolution_clock::now();
+                 std::chrono::duration<double> elapsed = end - start;
+                                    
+                 task_result = pnetc::type::task_result::task_result
+                   ( location_and_parameters.task_id
+                   , location_and_parameters.location
+                   , host
+                   , worker
+                   , std::to_string (unix_timestamp_ms)
+                   , elapsed.count()
+                   , "No shared python library was found in the folder " + config.python_home + "/lib on the host " + host
+                   , std::vector<char>()
+                   );         
+               }
+               else
+               {
+                boost::filesystem::path output_dir (config.output_directory);
+                 boost::filesystem::path log_file (output_dir / ("log_" + worker + ".txt"));
+                
+                 auto const py_res (run_python_task
+                                      ( config.python_home
+                                      , python_library
+                                      , config.path_to_python_module
+                                      , config.module
+                                      , config.method
+                                      , location_and_parameters.task_parameters
+                                      , worker
+                                      , log_file.string()
+                                      )
+                                   );
+                 
+                 auto end = std::chrono::high_resolution_clock::now();
+                 std::chrono::duration<double> elapsed = end - start;
+                    
+                 task_result = pnetc::type::task_result::task_result
+                   ( location_and_parameters.task_id
+                   , location_and_parameters.location
+                   , host
+                   , worker
+                   , std::to_string (unix_timestamp_ms)
+                   , elapsed.count()
+                   , py_res.first
+                   , py_res.second
+                   );         
+               }
+             }     
+            ]]>
+          </code>
+        </module>
+      </defun>
+      <connect-read port="config" place="config"/>
+      <connect-in port="location_and_parameters" place="location_and_parameters"/>
+      <connect-out port="task_result" place="task_result"/>
+      <connect-out port="task_completed" place="task_completed"/>
+    </transition>
+
+    <transition name="collect_results">
+      <defun>
+        <in name="task_completed" type="control"/>
+        <inout name="n_tasks" type="unsigned long"/>
+        <expression>
+          ${n_tasks} := ${n_tasks} - 1UL;
+        </expression>
+        <condition>
+          ${n_tasks}:gt:0UL
+        </condition>
+      </defun>
+      <connect-in port="task_completed" place="task_completed"/>
+      <connect-inout port="n_tasks" place="n_tasks"/>
+    </transition>
+    
+    <place name="get_number_of_remaining_tasks" type="remaining_tasks_request"
+           put_token="true"/>
+
+    <transition name="reply_number_of_remaining_tasks">
+      <defun>
+        <in name="trigger" type="remaining_tasks_request"/>
+        <inout name="remaining_tasks" type="unsigned long"/>
+        <expression/>
+      </defun>
+      <connect-in port="trigger" place="get_number_of_remaining_tasks"/>
+      <connect-read port="remaining_tasks" place="n_tasks"/>
+      <connect-response port="remaining_tasks" to="trigger"/>
+    </transition>
+    
+    <place name="get_next_task_result" type="task_result_request"
+           put_token="true"/>
+    
+    <transition name="reply_task_result">
+      <defun>
+        <in name="trigger" type="task_result_request"/>
+        <inout name="task_result" type="task_result"/>
+        <expression/>
+      </defun>
+      <connect-in port="trigger" place="get_next_task_result"/>
+      <connect-in port="task_result" place="task_result"/>
+      <connect-response port="task_result" to="trigger"/>
+    </transition>
+    
+    <place name="done" type="control"/>
+    <transition name="finalize">
+      <defun>
+        <in name="config" type="config"/>
+        <in name="parameter_list" type="list"/>
+        <in name="n_tasks" type="unsigned long"/>
+        <out name="done" type="control"/>
+        <expression>
+          ${done}:=[];
+        </expression>
+        <condition>
+          (${n_tasks}:eq:0UL)
+          :and:
+          (stack_empty (${parameter_list}))
+        </condition>
+      </defun>
+      <connect-in port="config" place="config"/>
+      <connect-in port="parameter_list" place="parameter_list"/>
+      <connect-in port="n_tasks" place="n_tasks"/>
+      <connect-out port="done" place="done"/>
+    </transition>
+  </net>
+</defun>

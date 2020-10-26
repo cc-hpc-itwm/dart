@@ -1,0 +1,16 @@
+#!/bin/sh
+
+if [ $# -ne 3 ]; then
+  echo 1>&2 "Please specify as arguments the source directory of DART and the installation paths of DART and GPI-Space, respectively!"
+  exit 1
+fi
+
+cmake $1 \
+      -DPYTHON_EXECUTABLE=$(which python3) \
+      -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")  \
+      -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; import os; print(os.path.join(sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')))") \
+      -DCMAKE_INSTALL_PREFIX=$2 \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DGSPC_HOME=$3 \
+      -DALLOW_ANY_GPISPACE_VERSION=TRUE \
+      -DPYTHON_VERSION=3 \
