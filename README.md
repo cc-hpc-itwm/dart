@@ -1,8 +1,6 @@
 How to use DART:
 
-1) install dart
-
-2) export DART_HOME=<install dir>
+1) install dart (see section Install)
 
 2) create a nodefile to list all available computing resources e.g. using 
    the scripts installed in $DART_HOME/bin
@@ -11,6 +9,13 @@ How to use DART:
    using the script stop_dart.sh installed in $DART_HOME/bin.
    The script requires as argument the absolute path to the nodefile
 
+**Install DART**
+
+```
+cd pip-package
+
+python -m pip install . --no-deps --ignore-installed -vv
+```
 
 **Build DART**
 
@@ -24,7 +29,7 @@ chrpath 0.16+
 c++ compiler with c++17 support
 
 How to build:
-
+```
 export GSPC_HOME=<path to GPI-Space install dir>
 export DART_HOME=<DART install dir>
 
@@ -41,7 +46,7 @@ cmake .. \
        -DPYTHON_VERSION=3 
 
 make install -j 10
-
+```
 **Examples**
 
 find examples in DART_HOME/example
