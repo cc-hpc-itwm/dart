@@ -10,7 +10,6 @@ import sys
 if (len (sys.argv)) < 2:
   raise Exception ("Please provide the folder containing the files to process!")
 
-sys.path.insert (0, os.environ['DART_HOME'] + '/lib')
 from dart import dart_context
 
 dc = dart_context (sys.exec_prefix)

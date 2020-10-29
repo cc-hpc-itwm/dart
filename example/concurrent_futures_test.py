@@ -26,7 +26,6 @@ parser.add_argument('--worker_description_file', help='worker description file',
 parser.add_argument('--certificates_directory', help='certificates directory', type=is_dir, action=FullPaths)
 parser.add_argument('--input_folder', help='input folder containing the files to analyze', type=is_dir, action=FullPaths)
 parser.add_argument('--method', help='python method to execute on worker side', type=str, required=True)
-parser.add_argument('--dart_installation', help='path to the DART installation', type=str, required=True)
 
 args = parser.parse_args()
 
@@ -35,7 +34,6 @@ print ("Worker description file: {0}".format (args.worker_description_file))
 print ("Certificates directory: {0}".format (args.certificates_directory))
 print ("Method: {0}".format (args.method))
 
-sys.path.insert (0, os.path.join (args.dart_installation, 'lib'))
 from dart import dart_context 
 
 dc = dart_context (args.anaconda_home, args.certificates_directory)

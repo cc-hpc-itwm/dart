@@ -1,7 +1,6 @@
 import sys
 import time
 
-sys.path.insert (0, '..\lib')
 from dart import dart_context as dc, catch_stdout, catch_stderr
 
 dc.catch_out()
