@@ -1,0 +1,10 @@
+graft dart/bin
+graft dart/bundle
+graft dart/certs
+graft dart/example
+graft dart/lib
+graft dart/libexec
+graft dart/workflow
+graft dart
+global-include *.so
+global-include *.pnet
