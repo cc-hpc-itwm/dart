@@ -192,7 +192,6 @@ function (bundle_GPISpace)
                             "bin/gspc-bootstrap-rifd"
                             "bin/gspc-rifd"
                             "bin/gspc-teardown-rifd"
-                            "libexec/gspc/orchestrator"
                             "libexec/gspc/gspc-logging-demultiplexer.exe"
         )
       elseif ("${_component}" STREQUAL "monitoring")

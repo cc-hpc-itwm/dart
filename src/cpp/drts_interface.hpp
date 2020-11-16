@@ -1,3 +1,5 @@
+#pragma once
+
 #include <installation.hpp>
 
 #include <drts/certificates.hpp>
@@ -6,6 +8,8 @@
 
 #include <pnetc/type/config.hpp>
 #include <pnetc/type/task_result.hpp>
+
+#include <cpp/result_storage.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
@@ -18,6 +22,7 @@
 #include <queue>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 namespace
 {
@@ -409,6 +414,13 @@ public:
   boost::python::object pop_result (gspc::job_id_t const& job);
 
   /**
+  * Checks whether a new result is available.
+  *
+  * @return true if a new result is available
+  */
+  bool is_result_available(gspc::job_id_t const& job);
+
+  /**
   * Stops the runtime.
   */
   void stop_runtime();
@@ -433,7 +445,7 @@ private:
 
   bool known_location (std::string const& location);
 
-  boost::python::object get_next_task_result
+  pnetc::type::task_result::task_result get_next_task_result
      (gspc::client& client, gspc::job_id_t const& job);
 
 private:
@@ -446,6 +458,6 @@ private:
   std::vector<std::unique_ptr<gspc::scoped_rifds>> _worker_rifds;
   boost::filesystem::path _python_home;
   descriptions_and_entry_points_t _descriptions_and_entry_points;
-  std::unordered_map<gspc::job_id_t, std::pair<unsigned long, std::queue<boost::python::object>>> _job_results;
+  std::unique_ptr<result_storage> _result_storage;
   boost::uuids::random_generator _generator;
 };
