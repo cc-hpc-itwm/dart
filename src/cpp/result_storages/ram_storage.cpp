@@ -12,7 +12,7 @@ using namespace result_storages;
 */
 void ram_storage::add_job(const gspc::job_id_t& job_id, unsigned expected_results)
 {
-  _storage[job_id] = { std::queue<task_result_t>(), expected_results, 0 };
+  _storage[job_id] = { std::queue<task_result>(), expected_results, 0 };
 }
 
 /**
@@ -61,7 +61,7 @@ unsigned ram_storage::get_number_of_received_results(const gspc::job_id_t& job_i
 * @param job_id      the id of the job to be added to the storage
 * @param task_result the result of the executed task
 */
-void ram_storage::push(const gspc::job_id_t& job_id, task_result_t&& task_result)
+void ram_storage::push(const gspc::job_id_t& job_id, task_result&& task_result)
 {
   ++(_storage[job_id].received_results);
   _storage[job_id].results.emplace(task_result);
@@ -77,7 +77,7 @@ void ram_storage::push(const gspc::job_id_t& job_id, task_result_t&& task_result
 * @param job_id the id of the job to get the result from
 * @return       the result, if there is one
 */
-ram_storage::optional_result_t ram_storage::get(const gspc::job_id_t& job_id) const
+ram_storage::optional_result ram_storage::get(const gspc::job_id_t& job_id) const
 {
   auto iter = _storage.find(job_id);
   if (iter == _storage.end())

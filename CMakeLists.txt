@@ -131,7 +131,9 @@ install (FILES
 extended_add_library ( NAME DART
   SOURCES src/cpp/dart_module.cpp
           src/cpp/drts_interface.cpp
+          src/cpp/task_result.cpp
           src/cpp/result_storages/ram_storage.cpp
+          src/cpp/result_storages/python_storage.cpp
           "${CMAKE_BINARY_DIR}/gen/pnetc/type/task_result/op.o" 
           "${CMAKE_BINARY_DIR}/gen/pnetc/type/config/op.o"
           "${CMAKE_BINARY_DIR}/gen/pnetc/type/location_and_parameters/op.o"

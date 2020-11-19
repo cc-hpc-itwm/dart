@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pnetc/type/task_result.hpp>
+#include <cpp/task_result.hpp>
 #include <drts/client.hpp>
 #include <boost/optional.hpp>
 
@@ -17,8 +17,7 @@
 class result_storage : boost::noncopyable
 {
 public:
-  using task_result_t = pnetc::type::task_result::task_result;
-  using optional_result_t = boost::optional<task_result_t>;
+  using optional_result = boost::optional<task_result>;
 public:
   result_storage() = default;
   virtual ~result_storage() = default;
@@ -75,7 +74,7 @@ public:
   * @param job_id      the id of the job to be added to the storage
   * @param task_result the result of the executed task
   */
-  virtual void push(const gspc::job_id_t& job_id, task_result_t&& task_result) = 0;
+  virtual void push(const gspc::job_id_t& job_id, task_result&& task_result) = 0;
 
   /**
   * Gets a result if available.
@@ -87,7 +86,7 @@ public:
   * @param job_id the id of the job to get the result from
   * @return       the result, if there is one
   */
-  virtual optional_result_t get(const gspc::job_id_t& job_id) const = 0;
+  virtual optional_result get(const gspc::job_id_t& job_id) const = 0;
 
   /**
   * Removes the earliest result from the storage.

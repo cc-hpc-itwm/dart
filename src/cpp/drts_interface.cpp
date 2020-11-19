@@ -1,6 +1,8 @@
 #include <cpp/drts_interface.hpp>
 
 #include <cpp/result_storages/ram_storage.hpp>
+#include <cpp/result_storages/python_storage.hpp>
+#include <cpp/task_result.hpp>
 
 #include <utils/utils.hpp>
 
@@ -81,10 +83,15 @@ drts_wrapper::drts_wrapper
                  )
   , _drts (nullptr)
   , _python_home (python_home)
-  , _result_storage(std::make_unique<result_storages::ram_storage>())
+  , _result_storage()
 {
- std::cout << dladdr2 (const_cast<char*>("drts_wrapper")).dli_fname << std::endl;
- std::cout << boost::filesystem::canonical (dladdr2 (const_cast<char*>("drts_wrapper")).dli_fname).parent_path().parent_path() << std::endl;
+  std::cout << dladdr2 (const_cast<char*>("drts_wrapper")).dli_fname << std::endl;
+  std::cout << boost::filesystem::canonical (dladdr2 (const_cast<char*>("drts_wrapper")).dli_fname).parent_path().parent_path() << std::endl;
+
+  if (!user_opt.has_key("result_storage"))
+    _result_storage = std::make_unique<result_storages::ram_storage>();
+  else
+    _result_storage = std::make_unique<result_storages::python_storage>(user_opt["result_storage"]);
 }
 
 void drts_wrapper::start_runtime()
@@ -438,32 +445,6 @@ boost::python::list drts_wrapper::run
     (abs_path_to_module, method, locations_and_parameters, {});
 }
 
-namespace
-{
-  boost::python::dict convert_result_to_python(const pnetc::type::task_result::task_result& result)
-  {
-    boost::python::dict dict_res;
-
-    dict_res["task_id"] = result.task_id;
-    dict_res["location"] = result.location;
-    dict_res["host"] = result.host;
-    dict_res["worker"] = result.worker;
-    dict_res["start_time"] = result.start_time;
-    dict_res["duration"] = result.duration;
-
-    if (!result.error.empty())
-    {
-      dict_res["error"] = result.error;
-    }
-    else
-    {
-      dict_res["result"] = result.success.to_string();
-    }
-
-    return dict_res;
-  }
-}
-
 boost::python::list drts_wrapper::run
   ( std::string const& abs_path_to_module
   , std::string const& method
@@ -497,7 +478,7 @@ boost::python::list drts_wrapper::run
   auto range(exec_res.equal_range("task_result"));
   boost::python::list results;
   for (auto it = range.first; it != range.second; ++it)
-    results.append(convert_result_to_python(pnetc::type::task_result::from_value(it->second)));
+    results.append(task_result_to_python(pnetc::type::task_result::from_value(it->second)));
   return results;
 }
 
@@ -579,13 +560,13 @@ boost::python::list drts_wrapper::collect_results
   auto range(exec_res.equal_range("task_result"));
   boost::python::list results;
   for (auto it = range.first; it != range.second; ++it)
-    results.append(convert_result_to_python(pnetc::type::task_result::from_value(it->second)));
+    results.append(task_result_to_python(pnetc::type::task_result::from_value(it->second)));
 
   auto result = _result_storage->get(job_id);
   while (result)
   {
     _result_storage->pop(job_id);
-    results.append(convert_result_to_python(result.get()));
+    results.append(task_result_to_python(result.get()));
     result = _result_storage->get(job_id);
   }
   _result_storage->remove_job(job_id);
@@ -795,12 +776,12 @@ boost::python::object drts_wrapper::pop_result (gspc::job_id_t const& job)
     throw std::logic_error
       ("No results are left. All results were retrieved!");
   }
-  else
+  else if(result)
   {
     _result_storage->pop(job);
-
-    return convert_result_to_python(result.get());
+    return task_result_to_python(result.get());
   }
+  throw std::logic_error("Waited for result, but no results available!");
 }
 
 

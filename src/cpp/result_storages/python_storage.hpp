@@ -1,7 +1,9 @@
 #pragma once
 
+#include <pnetc/type/task_result.hpp>
 #include <drts/client.hpp>
 #include <boost/optional.hpp>
+#include <boost/python.hpp>
 
 #include "cpp/result_storage.hpp"
 
@@ -11,20 +13,13 @@
 namespace result_storages
 {
   /**
-  * Implementation of result_storage for storing results in RAM.
+  * Implementation of result_storage for objects that have been defined in python.
   */
-  class ram_storage final : public result_storage
+  class python_storage final : public result_storage
   {
-  private:
-    struct JobInformation
-    {
-      std::queue<task_result> results;
-      unsigned expected_results = 0;
-      unsigned received_results = 0;
-    };
   public:
-    ram_storage() = default;
-    virtual ~ram_storage() = default;
+    python_storage(const boost::python::object& object);
+    virtual ~python_storage() = default;
 
     /**
     * Adds a job to the storage.
@@ -88,6 +83,6 @@ namespace result_storages
     */
     virtual void pop(const gspc::job_id_t& job_id);
   private:
-    std::unordered_map<gspc::job_id_t, JobInformation> _storage;
+    boost::python::object _object;
   };
 }
