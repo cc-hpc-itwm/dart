@@ -12,8 +12,8 @@
  
   <struct name="config">
     <field name="python_home" type="string"/>
-    <field name="path_to_python_module" type="string"/>
-    <field name="module" type="string"/>
+    <field name="path_to_module_or_module_content" type="string"/>
+    <field name="is_path" type="string"/>
     <field name="method" type="string"/>
     <field name="output_directory" type="string"/>
   </struct>
@@ -81,9 +81,9 @@
                                 , task_result
                                 , task_completed
                                 )"
-          pass_context="true">
-          <cinclude href="cpp/task_interface.hpp"/>
-          <cinclude href="utils/get_public_worker_name.hpp"/>
+          pass_context="true" require_function_unloads_without_rest="false">
+          <cinclude href="workflow/task_interface.hpp"/>
+          <cinclude href="workflow/get_public_worker_name.hpp"/>
           <cinclude href="boost/asio/ip/host_name.hpp"/>
           <cinclude href="boost/filesystem.hpp"/>
           <cinclude href="chrono"/>
@@ -174,8 +174,8 @@
                  auto const py_res (run_python_task
                                       ( config.python_home
                                       , python_library
-                                      , config.path_to_python_module
-                                      , config.module
+                                      , config.path_to_module_or_module_content
+                                      , config.is_path
                                       , config.method
                                       , location_and_parameters.task_parameters
                                       , worker

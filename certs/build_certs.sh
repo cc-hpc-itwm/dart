@@ -1,6 +1,6 @@
 #!/bin/bash
 
-openssl genrsa -des3 -out server.key 1024
+openssl genrsa -des3 -out server.key 2048
 
 #Generate Certificate signing request
 openssl req -new -key server.key -out server.csr

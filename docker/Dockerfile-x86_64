@@ -1,0 +1,52 @@
+FROM quay.io/pypa/manylinux2010_x86_64
+
+RUN mkdir build && cd build
+
+RUN yum update && yum -y install \
+  wget \
+  openssl-devel \
+  hwloc-devel.x86_64 \
+  chrpath.x86_64 \
+  qt5-qtbase-devel.x86_64 \
+  python-devel.x86_64 \
+  libibverbs-devel.x86_64
+
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.19.1/cmake-3.19.1.tar.gz
+RUN tar -xzf cmake-3.19.1.tar.gz && rm cmake-3.19.1.tar.gz && cd cmake-3.19.1 && bash ./bootstrap && gmake install
+RUN cd .. && rm -r cmake-3.19.1
+
+RUN wget https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz/download
+RUN tar -xzf download && rm download && mkdir boost_build
+ENV BOOST_ROOT=${PWD}/boost_build/
+RUN cd boost_1_63_0 && bash bootstrap.sh --prefix="${BOOST_ROOT}" && ./b2 \
+  cflags="-fPIC -fno-gnu-unique" \
+  cxxflags="-fPIC -fno-gnu-unique" \
+  link=static variant=release install
+RUN cd .. && rm -r boost_1_63_0
+
+RUN wget https://github.com/cc-hpc-itwm/GPI-2/archive/v1.3.2.tar.gz
+RUN tar -xzf v1.3.2.tar.gz && rm v1.3.2.tar.gz && cd GPI-2-1.3.2 && ./install.sh --with-ethernet
+RUN cd .. && rm -r GPI-2-1.3.2
+ENV PATH=${PATH}:/opt/GPI2/bin
+ENV PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:/opt/GPI2/lib64/pkgconfig
+
+RUN git clone --depth 1 --shallow-submodules --recursive --branch libssh2-1.9.0 https://github.com/libssh2/libssh2.git libssh2
+RUN cmake -D CRYPTO_BACKEND=OpenSSL -D CMAKE_BUILD_TYPE=Release -D ENABLE_ZLIB_COMPRESSION=ON -D CMAKE_CXX_FLAGS="-fPIC" -DCMAKE_C_FLAGS="-fPIC" -B libssh2/build -S libssh2
+RUN cmake --build libssh2/build --target install
+ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}
+RUN rm -r libssh2
+
+RUN git clone https://github.com/cc-hpc-itwm/gpispace
+ENV GPISPACE_SOURCE_DIR=${PWD}/gpispace
+ENV GPISPACE_BUILD_DIR=${PWD}/gspc-build
+ENV GPISPACE_INSTALL_DIR=${PWD}/gspc-install
+ENV GPISPACE_TEST_DIR=${PWD}/gspc-test
+RUN mkdir gspc-install && mkdir gspc-test && cd "${GPISPACE_SOURCE_DIR}" && git submodule update --init --recursive
+RUN mkdir -p "${GPISPACE_BUILD_DIR}" && cd "${GPISPACE_BUILD_DIR}" && cmake \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="${GPISPACE_INSTALL_DIR}" \
+  -DSHARED_DIRECTORY_FOR_TESTS="${GPISPACE_TEST_DIR}" \
+  -DTESTING_RIF_STRATEGY=ssh -DCMAKE_INSTALL_MESSAGE=LAZY \
+  -DBOOST_ROOT="${BOOST_ROOT}" \
+  -DCMAKE_CXX_FLAGS="-DBOOST_COROUTINES_NO_DEPRECATION_WARNING -fPIC -Wno-unused-function"\
+  "${GPISPACE_SOURCE_DIR}" && make install

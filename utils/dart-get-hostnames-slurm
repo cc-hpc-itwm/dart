@@ -1,2 +1,0 @@
-#!/bin/bash
-echo $SLURM_NODELIST | scontrol show hostnames > nodefile

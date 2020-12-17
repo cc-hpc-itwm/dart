@@ -21,9 +21,12 @@ find_GPISpace (REVISION 8f22a53d55539b5f205ccd5103f04fdf05859714)
 
 find_boost (1.61 REQUIRED COMPONENTS unit_test_framework test_exec_monitor)
 
+find_package(OpenSSL REQUIRED)
+
 #Note: works with soft/anaconda3/5.0.1
 set(Python_ADDITIONAL_VERSIONS 3.6)
 
+find_package (Threads REQUIRED)
 find_package (PythonInterp)
 
 if (PYTHONINTERP_FOUND)
@@ -47,7 +50,7 @@ message(STATUS "PYTHON_INCLUDE_DIRS = ${PYTHON_INCLUDE_DIRS}")
 add_definitions( -DPYTHON_EXECUTABLE="${PYTHON_EXECUTABLE}" )
 add_definitions( -DPYTHON_LIBRARIES="${PYTHON_LIBRARIES}" )
 
-INCLUDE_DIRECTORIES (${PYTHON_INCLUDE_DIRS} )
+INCLUDE_DIRECTORIES (${PYTHON_INCLUDE_DIRS})
 
 set (BUNDLE_ROOT "libexec/bundle")
 bundle_GPISpace (DESTINATION "${BUNDLE_ROOT}/gpispace"
@@ -72,19 +75,47 @@ add_custom_target (bundle-impl ALL
   DEPENDS "${bundle_path}"
 )
 
-include_directories ("${CMAKE_SOURCE_DIR}")
-
-message ("Include folder ${CMAKE_SOURCE_DIR}/src")
 include_directories ("${CMAKE_SOURCE_DIR}/src")
 
-#add_subdirectory (src/util-generic)
-
-extended_add_library (NAME installation
+extended_add_library(NAME log
   NAMESPACE dart
-  SOURCES "src/installation.cpp"
-  LIBRARIES GPISpace::execution #Util::Generic
+  SOURCES "src/log/log.cpp"
+  LIBRARIES Boost::system Threads::Threads
   POSITION_INDEPENDENT
 )
+
+extended_add_library(NAME net
+  NAMESPACE dart
+  SOURCES "src/net/io_pool.cpp"
+  LIBRARIES Boost::system Threads::Threads dart::log
+  POSITION_INDEPENDENT
+)
+
+extended_add_library(NAME http
+  NAMESPACE dart
+  SOURCES "src/http/client.cpp"
+          "src/http/message.cpp"
+          "src/http/message_builder.cpp"
+          "src/http/server.cpp"
+          "src/http/status_code.cpp"
+  LIBRARIES Boost::system dart::net dart::log OpenSSL::SSL OpenSSL::Crypto
+  POSITION_INDEPENDENT
+)
+
+extended_add_library(NAME rest
+  NAMESPACE dart
+  SOURCES "src/rest/message.cpp"
+          "src/rest/router.cpp"
+  LIBRARIES Boost::system dart::http dart::log
+  POSITION_INDEPENDENT
+)
+
+#extended_add_library (NAME installation
+#  NAMESPACE dart
+#  SOURCES "src/installation.cpp"
+#  LIBRARIES GPISpace::execution #Util::Generic
+#  POSITION_INDEPENDENT
+#)
 
 # Note: Does _NOT_ track external dependencies!
 add_custom_command (
@@ -127,27 +158,43 @@ install (FILES
   "${CMAKE_BINARY_DIR}/gen/pnetc/op/libexecute_python_task.so"
   DESTINATION workflow
 )
- 
-extended_add_library ( NAME DART
-  SOURCES src/cpp/dart_module.cpp
-          src/cpp/drts_interface.cpp
-          src/cpp/task_result.cpp
-          src/cpp/result_storages/ram_storage.cpp
-          src/cpp/result_storages/python_storage.cpp
+
+extended_add_executable(NAME dart-server
+  SOURCES "src/dart-server/main.cpp"
+          "src/dart-server/dart_server.cpp"
+          "src/dart-server/installation.cpp"
+          "src/dart-server/gspc_interface.cpp"
+          "src/dart-server/job_storages/ram_storage.cpp"
           "${CMAKE_BINARY_DIR}/gen/pnetc/type/task_result/op.o" 
           "${CMAKE_BINARY_DIR}/gen/pnetc/type/config/op.o"
           "${CMAKE_BINARY_DIR}/gen/pnetc/type/location_and_parameters/op.o"
-  TYPE PYTHON_MODULE
-  LIBRARIES #Util::Generic
-            dart::installation
-            GPISpace::execution
-            GPISpace::workflow_development
-            ${PYTHON_LIBRARIES}
-            Boost::python
-  DEPENDS dart_workflow.pnet_and_wrapper-library       
+  LIBRARIES Boost::system OpenSSL::SSL OpenSSL::Crypto 
+            dart::http dart::rest GPISpace::execution
   INCLUDE_DIRECTORIES PUBLIC "${CMAKE_BINARY_DIR}/gen"
   INSTALL
 )
+
+ 
+#extended_add_library ( NAME DART
+#  SOURCES src/cpp/dart_module.cpp
+#          src/cpp/drts_interface.cpp
+#          src/cpp/task_result.cpp
+#          src/cpp/result_storages/ram_storage.cpp
+#          src/cpp/result_storages/python_storage.cpp
+#          "${CMAKE_BINARY_DIR}/gen/pnetc/type/task_result/op.o" 
+#          "${CMAKE_BINARY_DIR}/gen/pnetc/type/config/op.o"
+#          "${CMAKE_BINARY_DIR}/gen/pnetc/type/location_and_parameters/op.o"
+#  TYPE PYTHON_MODULE
+#  LIBRARIES #Util::Generic
+#            dart::installation
+#            GPISpace::execution
+#            GPISpace::workflow_development
+#            ${PYTHON_LIBRARIES}
+#            Boost::python
+#  DEPENDS dart_workflow.pnet_and_wrapper-library       
+#  INCLUDE_DIRECTORIES PUBLIC "${CMAKE_BINARY_DIR}/gen"
+#  INSTALL
+#)
             
 install (DIRECTORY
   "${CMAKE_SOURCE_DIR}/example"
@@ -159,25 +206,35 @@ install (DIRECTORY
   DESTINATION  .
 )
 
-install (FILES
-  "${CMAKE_SOURCE_DIR}/example/dart_task.py"
-  "${CMAKE_SOURCE_DIR}/src/python/dart.py"
-  DESTINATION lib
+install (DIRECTORY
+  "${CMAKE_SOURCE_DIR}/python"
+  DESTINATION .
 )
 
-install (FILES
-  "${CMAKE_SOURCE_DIR}/utils/dart-stop-all"
-  "${CMAKE_SOURCE_DIR}/utils/dart-stop-all-simple-nodefile"
-  "${CMAKE_SOURCE_DIR}/utils/dart-stop-all-carme"
-  "${CMAKE_SOURCE_DIR}/utils/dart-create-nodefile-carme"
-  "${CMAKE_SOURCE_DIR}/utils/dart-create-nodefile-slurm"
-  "${CMAKE_SOURCE_DIR}/utils/dart-get-hostnames-slurm"
-  "${CMAKE_SOURCE_DIR}/utils/_ports.py"
-  "${CMAKE_SOURCE_DIR}/utils/_sshconfig.py"
-  DESTINATION bin
-  PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
-              GROUP_READ GROUP_EXECUTE
-              WORLD_READ WORLD_EXECUTE
+install (DIRECTORY
+  "${CMAKE_SOURCE_DIR}/bin"
+  DESTINATION .
 )
+
+#install (FILES
+#  "${CMAKE_SOURCE_DIR}/example/dart_task.py"
+#  "${CMAKE_SOURCE_DIR}/src/python/dart.py"
+#  DESTINATION lib
+#)
+
+#install (FILES
+#  "${CMAKE_SOURCE_DIR}/utils/dart-stop-all"
+#  "${CMAKE_SOURCE_DIR}/utils/dart-stop-all-simple-nodefile"
+#  "${CMAKE_SOURCE_DIR}/utils/dart-stop-all-carme"
+#  "${CMAKE_SOURCE_DIR}/utils/dart-create-nodefile-carme"
+#  "${CMAKE_SOURCE_DIR}/utils/dart-create-nodefile-slurm"
+#  "${CMAKE_SOURCE_DIR}/utils/dart-get-hostnames-slurm"
+#  "${CMAKE_SOURCE_DIR}/utils/_ports.py"
+#  "${CMAKE_SOURCE_DIR}/utils/_sshconfig.py"
+#  DESTINATION bin
+#  PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+#              GROUP_READ GROUP_EXECUTE
+#              WORLD_READ WORLD_EXECUTE
+#)
 
 add_subdirectory (test)
