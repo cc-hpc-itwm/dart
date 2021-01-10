@@ -1,6 +1,7 @@
 #include "gspc_interface.hpp"
 
 #include <iostream>
+#include <unordered_set>
 
 #include <boost/asio/ip/host_name.hpp>
 #include <boost/program_options/options_description.hpp>
@@ -374,18 +375,16 @@ void gspc_interface::start_job(const std::string& job_name, const job_config& co
 
   log_message::info("[gspc_interface::start_job] created list");
   pnetc::type::config::config c(
-    config.python_home
-    , config.path_to_module_or_module_content
+    config.path_to_module_or_module_content
     , config.is_path ? "true" : "false"
     , config.method
-    , config.output_directory
   );
   log_message::info(std::string("[gspc_interface::start_job] config = ")
-    + "\n" + c.python_home
+  //  + "\n" + c.python_home
     + "\n" + c.path_to_module_or_module_content
     + "\n" + c.is_path
     + "\n" + c.method
-    + "\n" + c.output_directory
+  //  + "\n" + c.output_directory
   );
   log_message::info("[gspc_interface::start_job] created config");
 

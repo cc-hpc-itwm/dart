@@ -1,0 +1,6 @@
+{
+  "name": "worker-name",
+  "python_home": "/usr/",
+  "module_prefix" : "../example/",
+  "output_directory": "/var/tmp/"
+}

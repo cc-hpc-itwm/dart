@@ -1,6 +1,7 @@
 #define PY_SSIZE_T_CLEAN
 
 #include "workflow/handle_error.hpp"
+#include "workflow/load_worker_config.hpp"
 
 #include <dlfcn.h>
 #include <fstream>
@@ -140,7 +141,8 @@ std::pair<std::string, std::vector<char>> run_python_task
   if (is_path == "true")
   {
     auto last = path_to_module_or_module_content.find_last_of("/");
-    path = path_to_module_or_module_content.substr(0, last + 1);
+    path = dart::worker_config.module_prefix + 
+      path_to_module_or_module_content.substr(0, last + 1);
     module = path_to_module_or_module_content.substr(last + 1);
   }
   else

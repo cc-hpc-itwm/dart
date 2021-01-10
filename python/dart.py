@@ -86,19 +86,15 @@ class client:
   # Adds a job definition
   #
   # @param name        the name of the job
-  # @param python_home the python home on the clients TODO: remove
   # @param module_path the path to the module on the clients
   # @param method      the method from the module to execute
-  # @param output_dir  the directory where the logging file should be stored
-  def add_job(self, name, python_home, module_path, method, output_dir):
+  def add_job(self, name, module_path, method):
     r = requests.post(self.server + "/job/", json={
         'key': self.key
       , 'name' : name
-      , 'python_home' : python_home
       , 'module' : module_path
       , 'is_module_path' : True
       , 'method' : method
-      , 'output_directory' : output_dir
       }, verify=False)
     if r.status_code != requests.codes.ok:
       raise Exception('response not ok')

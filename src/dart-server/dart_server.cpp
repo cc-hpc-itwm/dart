@@ -315,11 +315,9 @@ void dart_server::post_job(http::client* client, const rest::message& message, c
   auto name = body.get("name", "");
 
   job_config config;
-  config.python_home = body.get("python_home", "");
   config.path_to_module_or_module_content = body.get("module", "");
   config.is_path = body.get("is_module_path", false);
   config.method = body.get("method", "");
-  config.output_directory = body.get("output_directory", "");
   try
   {
     _storage->add_job(name, config);
@@ -438,8 +436,6 @@ void dart_server::get_job(http::client* client, const rest::message& message, co
 
   content.put("job.id", job);
   content.put("job.status", static_cast<unsigned>(j.first));
-  content.put("job.config.python_home", j.second.python_home);
-  content.put("job.config.output_directory", j.second.output_directory);
   content.put("job.config.module", j.second.path_to_module_or_module_content);
   content.put("job.config.is_module_path", j.second.is_path);
   content.put("job.config.method", j.second.method);

@@ -13,11 +13,9 @@ enum class job_status
 
 struct job_config
 {
-  std::string python_home;
   bool is_path;
   std::string path_to_module_or_module_content;
   std::string method;
-  std::string output_directory;
 };
 
 struct result

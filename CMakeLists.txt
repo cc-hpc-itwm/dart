@@ -200,6 +200,10 @@ install (DIRECTORY
   "${CMAKE_SOURCE_DIR}/example"
   DESTINATION  .
 )
+install (DIRECTORY
+  "${CMAKE_SOURCE_DIR}/worker"
+  DESTINATION  .
+)
 
 install (DIRECTORY
   "${CMAKE_SOURCE_DIR}/certs"

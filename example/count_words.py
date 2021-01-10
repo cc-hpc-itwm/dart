@@ -10,11 +10,10 @@ import dart
 
 client = dart.client('https://127.0.0.1:7777', '000') # 000 is the client key (unused atm)
 
-if client.get_job_status('count_words') == dart.job_status.unknown:
-  client.add_job('count_words_job', 
-    sys.exec_prefix, 
-    '/mnt/c/users/luca/desktop/fraunhofer/src/dart-new/install/example/count_words_worker',
-    'count_words', '/var/tmp/')
+if client.get_job_status('count_words_job') == dart.job_status.unknown:
+  client.add_job('count_words_job',
+    'count_words_worker',
+    'count_words')
   
 client.add_tasks('count_words_job', [
   { 'location':'local_cluster', 'parameter': '/home/luca/test/test.txt'},
