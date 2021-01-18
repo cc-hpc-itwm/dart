@@ -1,0 +1,107 @@
+diff --git a/src/GPI2.h b/src/GPI2.h
+index cb54904..b2a91d2 100644
+--- a/src/GPI2.h
++++ b/src/GPI2.h
+@@ -49,13 +49,9 @@ gaspi_lock_t gaspi_mseg_lock;
+ static inline gaspi_cycles_t
+ gaspi_get_cycles (void)
+ {
+-  unsigned low, high;
+-  unsigned long long val;
+-
+-  asm volatile ("rdtsc":"=a" (low), "=d" (high));
+-  val = high;
+-  val = (val << 32) | low;
+-  return val;
++  unsigned long ts;
++  asm volatile("isb; mrs %0, cntvct_el0" : "=r" (ts));
++  return ts;
+ }
+ 
+ #ifdef MIC
+diff --git a/src/GPI2_Utility.h b/src/GPI2_Utility.h
+index 73647a1..cd82c06 100644
+--- a/src/GPI2_Utility.h
++++ b/src/GPI2_Utility.h
+@@ -25,12 +25,11 @@ along with GPI-2. If not, see <http://www.gnu.org/licenses/>.
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <time.h>
+-#include <xmmintrin.h>
+ 
+ #ifdef MIC
+ #define gaspi_delay() _mm_delay_32(32)
+ #else
+-#define gaspi_delay() _mm_pause()
++#define gaspi_delay() __asm__ __volatile__("yield")
+ #endif
+ 
+ 
+diff --git a/src/devices/tcp/tcp_device.c b/src/devices/tcp/tcp_device.c
+index 24c4d60..d8131de 100644
+--- a/src/devices/tcp/tcp_device.c
++++ b/src/devices/tcp/tcp_device.c
+@@ -474,7 +474,7 @@ _tcp_dev_post_wc(uint64_t wr_id,
+   while(insert_ringbuffer(cqs_map[cq_handle]->rbuf, wc) < 0)
+     {
+       printf("completion queue #%i is full.\n", cq_handle);
+-      __asm__ ( "pause;" );/* TODO */
++      gaspi_delay();
+     }
+ 
+   /* acknowledge receiver (if that's the case) */
+diff --git a/tests/microbenchmarks/utils.h b/tests/microbenchmarks/utils.h
+index 15ae2c6..3042679 100644
+--- a/tests/microbenchmarks/utils.h
++++ b/tests/microbenchmarks/utils.h
+@@ -13,13 +13,9 @@ typedef unsigned long mcycles_t;
+ static inline mcycles_t
+ get_mcycles (void)
+ {
+-  unsigned low, high;
+-  unsigned long long val;
+-
+-  asm volatile ("rdtsc":"=a" (low), "=d" (high));
+-  val = high;
+-  val = (val << 32) | low;
+-  return val;
++  unsigned long ts;
++  asm volatile("isb; mrs %0, cntvct_el0" : "=r" (ts));
++  return ts;
+ }
+ 
+ static int
+diff --git a/tests/microbenchmarks/write_lat.c b/tests/microbenchmarks/write_lat.c
+index b6c97d0..8cfbfe2 100644
+--- a/tests/microbenchmarks/write_lat.c
++++ b/tests/microbenchmarks/write_lat.c
+@@ -1,6 +1,5 @@
+ #include "utils.h"
+ #include "common.h"
+-#include <xmmintrin.h>
+ 
+ int
+ main (int argc, char *argv[])
+@@ -55,11 +54,7 @@ main (int argc, char *argv[])
+ 		  rcnt++;
+ 		  while (*pollBuf != (char) rcnt)
+ 		    {
+-#ifdef MIC
+-		      _mm_delay_32(32);
+-#else
+-		      _mm_pause();
+-#endif
++		      __asm__ __volatile__("yield");
+ 		    }
+ 		}
+ 
+diff --git a/tests/microbenchmarks/write_notify_lat.c b/tests/microbenchmarks/write_notify 67ac1e7..ae8ddab 100644
+--- a/tests/microbenchmarks/write_notify_lat.c
++++ b/tests/microbenchmarks/write_notify_lat.c
+@@ -1,6 +1,5 @@
+ #include "utils.h"
+ #include "common.h"
+-#include <xmmintrin.h>
+ 
+ int
+ main (int argc, char *argv[])

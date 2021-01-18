@@ -5,6 +5,7 @@
 
 #include <boost/property_tree/json_parser.hpp>
 #include <thread>
+#include <regex>
 
 #include "log/log.hpp"
 
@@ -564,6 +565,7 @@ void dart_server::get_results(http::client* client, const rest::message& message
   }
 
   auto amount = message.content().get("amount", 0);
+  auto worker_regex = message.content().get("worker_regex", "");
 
   boost::property_tree::ptree content;
   for (auto& res : responses)
@@ -582,23 +584,32 @@ void dart_server::get_results(http::client* client, const rest::message& message
 
   if (amount > 0)
   {
-    auto results = _storage->get_results(job, amount);
-    boost::property_tree::ptree results_content;
-    for (auto r : results)
+    try
     {
-      boost::property_tree::ptree result_content;
-      result_content.put("id", r.first);
-      result_content.put("job", r.second.job);
-      result_content.put("worker", r.second.worker);
-      result_content.put("start_time", r.second.start_time);
-      result_content.put("duration", r.second.duration);
-      if (r.second.error != "")
-        result_content.put("error", r.second.error);
-      else
-        result_content.put("success", r.second.success);
-      results_content.push_back({ "", result_content });
+      auto results = _storage->get_results(job, amount, worker_regex);
+      boost::property_tree::ptree results_content;
+      for (auto r : results)
+      {
+        boost::property_tree::ptree result_content;
+        result_content.put("id", r.first);
+        result_content.put("job", r.second.job);
+        result_content.put("worker", r.second.worker);
+        result_content.put("start_time", r.second.start_time);
+        result_content.put("duration", r.second.duration);
+        if (r.second.error != "")
+          result_content.put("error", r.second.error);
+        else
+          result_content.put("success", r.second.success);
+        results_content.push_back({ "", result_content });
+      }
+      content.add_child("results", results_content);
     }
-    content.add_child("results", results_content);
+    catch (const std::regex_error&)
+    {
+      client->send_message(internal_error(http::status_code::BadRequest_400, -1,
+        "invalid regular expression", ""));
+      return;
+    }
   }
   content.put("job.id", job);
   content.put("job.status", static_cast<unsigned>(_storage->get_status(job)));

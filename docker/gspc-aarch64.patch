@@ -1,0 +1,21 @@
+diff --git a/src/fhg/util/signal_handler_manager.cpp b/src/fhg/util/signal_handler_manager.cpp
+index 9a66f07..b1153a1 100644
+--- a/src/fhg/util/signal_handler_manager.cpp
++++ b/src/fhg/util/signal_handler_manager.cpp
+@@ -117,15 +117,7 @@ namespace fhg
+                                (&(static_cast<ucontext_t*> (context)->uc_mcontext))
+                              ));
+ 
+-#if __WORDSIZE == 32
+-        unsigned long caller_address (mcontext->eip);
+-#else
+-#if __WORDSIZE == 64
+-        unsigned long caller_address (mcontext->rip);
+-#else
+-#error Unable to get caller_address on this architecture.
+-#endif
+-#endif
++        unsigned long caller_address(mcontext->sp);
+ 
+         std::ostringstream log_message;
+         log_message << "received signal "

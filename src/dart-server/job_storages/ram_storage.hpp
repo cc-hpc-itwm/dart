@@ -66,12 +66,15 @@ namespace job_storages
     /**
     * Returns a list of results.
     *
-    * @param job    the job name
-    * @param amount the maximum amount of results to get
-    * @return       a list of id result pairs
+    * @param job          the job name
+    * @param amount       the maximum amount of results to get
+    * @param worker_regex only results whose worker match this regular expression will be returned
+    *                     an empty regex should match every worker
+    * @return             a list of id result pairs
     */
     virtual std::vector<std::pair<std::string, result>>
-      get_results(const std::string& job, unsigned amount) const override;
+      get_results(const std::string& job, unsigned amount, const std::string& worker_regex) const override;
+
 
     /**
     * Deletes a result.

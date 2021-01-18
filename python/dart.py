@@ -157,7 +157,7 @@ class client:
     if r.status_code != requests.codes.ok:
       raise Exception('response not ok')
     response = json.loads(r.content)
-    return job_status(response['job']['status'])
+    return job_status(int(response['job']['status']))
   
   ##
   # Gets results of the specified job
@@ -186,12 +186,14 @@ class client:
   #   'job' : { 'id' : '...', 'status' : '...'}
   # }
   #
-  # @param job    the job name 
-  # @param amount the maximal amounts of jobs to get
-  def get_job_results(self, job, amount):
+  # @param job          the job name 
+  # @param amount       the maximal amounts of jobs to get
+  # @param worker_regex a regex that the worker of the result has to match. Empty regex matches everything.
+  def get_job_results(self, job, amount, worker_regex = ""):
     r = requests.get(self.server + "/job/" + job + "/results/", json={
         'key': self.key
       , 'amount' : amount
+      , 'worker_regex' : worker_regex
       }, verify=False)
     if r.status_code != requests.codes.ok:
       raise Exception('response not ok')

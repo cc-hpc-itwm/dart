@@ -6,6 +6,7 @@
 
 #include <stdexcept>
 #include <algorithm>
+#include <regex>
 
 using namespace job_storages;
 
@@ -106,22 +107,34 @@ void ram::add_result(const result& result)
 /**
 * Returns a list of results.
 *
-* @param job    the job name
-* @param amount the maximum amount of results to get
-* @return       a list of id result pairs
+* @param job          the job name
+* @param amount       the maximum amount of results to get
+* @param worker_regex only results whose worker match this regular expression will be returned
+*                     an empty regex should match every worker
+* @return             a list of id result pairs
 */
-std::vector<std::pair<std::string, result>> ram::get_results(const std::string& job, unsigned amount) const
+std::vector<std::pair<std::string, result>>
+ram::get_results(const std::string& job, unsigned amount, const std::string& worker_regex) const
 {
   log_message::info("Get results");
+
+  // empty regex should match everything
+  std::regex regex(worker_regex == "" ? ".*" : worker_regex);
+
   auto iter = _results.find(job);
   if (iter == _results.end())
     return {};
 
   std::vector<std::pair<std::string, result>> results;
   results.reserve(std::min(static_cast<size_t>(amount), iter->second.size()));
-  for (auto i = 0u; i < std::min(static_cast<size_t>(amount), iter->second.size()); ++i)
+  for (auto i = 0u; i < iter->second.size(); ++i)
   {
+    if (!std::regex_match(iter->second[i].second.worker, regex))
+      continue;
+
     results.push_back(iter->second[i]);
+    if (results.size() >= amount)
+      break;
   }
   return results;
 }
