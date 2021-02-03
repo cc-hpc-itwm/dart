@@ -13,14 +13,14 @@ enum class job_status
 
 struct job_config
 {
-  bool is_path;
-  std::string path_to_module_or_module_content;
+  std::string module_path;
   std::string method;
 };
 
 struct result
 {
   std::string job;
+  std::string host;
   std::string worker;
   std::string location;
   std::string start_time;

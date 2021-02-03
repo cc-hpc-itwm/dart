@@ -286,9 +286,14 @@ void dart_server::get_information(http::client* client, const rest::message& mes
       content.add_child("servers", response.content());
   }
 
-  boost::property_tree::ptree my_content;
-  my_content.put("host", boost::asio::ip::host_name());
-  content.get_child("servers").add_child("", my_content);
+  boost::property_tree::ptree server_information;
+  server_information.put("host", boost::asio::ip::host_name());
+  server_information.put("agent.host", _gspc->get_agent_host());
+  server_information.put("agent.port", _gspc->get_agent_port());
+
+  boost::property_tree::ptree infos;
+  infos.add_child("", server_information);
+  content.add_child("servers", infos);
 
   client->send_message(rest::message(http::status_code::OK_200, content));
 }
@@ -316,8 +321,7 @@ void dart_server::post_job(http::client* client, const rest::message& message, c
   auto name = body.get("name", "");
 
   job_config config;
-  config.path_to_module_or_module_content = body.get("module", "");
-  config.is_path = body.get("is_module_path", false);
+  config.module_path = body.get("module_path", "");
   config.method = body.get("method", "");
   try
   {
@@ -365,7 +369,9 @@ void dart_server::post_tasks(http::client* client, const rest::message& message,
     return;
   }
 
-  auto [status, config] = _storage->get_job(job);
+  auto _pair = _storage->get_job(job);
+  auto status = _pair.first;
+  auto config = _pair.second;
   if (status == job_status::unknown)
   {
     client->send_message(rest::message(http::status_code::NotFound_404));
@@ -437,8 +443,7 @@ void dart_server::get_job(http::client* client, const rest::message& message, co
 
   content.put("job.id", job);
   content.put("job.status", static_cast<unsigned>(j.first));
-  content.put("job.config.module", j.second.path_to_module_or_module_content);
-  content.put("job.config.is_module_path", j.second.is_path);
+  content.put("job.config.module_path", j.second.module_path);
   content.put("job.config.method", j.second.method);
 
   client->send_message(rest::message(http::status_code::OK_200, content));
@@ -593,6 +598,7 @@ void dart_server::get_results(http::client* client, const rest::message& message
         boost::property_tree::ptree result_content;
         result_content.put("id", r.first);
         result_content.put("job", r.second.job);
+        result_content.put("host", r.second.host);
         result_content.put("worker", r.second.worker);
         result_content.put("start_time", r.second.start_time);
         result_content.put("duration", r.second.duration);

@@ -117,7 +117,9 @@ extended_add_library(NAME rest
 #  POSITION_INDEPENDENT
 #)
 
-# Note: Does _NOT_ track external dependencies!
+
+add_custom_command(OUTPUT always_rebuild COMMAND cmake -E echo)
+
 add_custom_command (
   OUTPUT "${CMAKE_BINARY_DIR}/dart_workflow.pnet"
          "${CMAKE_BINARY_DIR}/gen/pnetc/op/libexecute_python_task.so"
@@ -144,7 +146,7 @@ add_custom_command (
           &&
           make -C "${CMAKE_BINARY_DIR}/gen"
   DEPENDS "${CMAKE_SOURCE_DIR}/workflow/dart_workflow.xpnet"
-         # Util::Generic
+          always_rebuild
 )
 
 add_custom_target (dart_workflow.pnet_and_wrapper-library

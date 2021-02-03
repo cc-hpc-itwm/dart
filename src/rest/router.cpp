@@ -42,7 +42,7 @@ void router::add_resource(std::string path, const std::string& method,
         node = child;
       else
       {
-        node->children.insert({ part, std::make_unique<tree>() });
+        node->children.insert(std::make_pair( part, std::make_unique<tree>() ));
         node = node->children[part].get();
       }
     }
@@ -57,7 +57,7 @@ void router::add_resource(std::string path, const std::string& method,
       node = child;
     else
     {
-      node->children.insert({ part, std::make_unique<tree>() });
+      node->children.insert(std::make_pair( part, std::make_unique<tree>() ));
       node = node->children[part].get();
     }
   }

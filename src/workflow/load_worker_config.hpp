@@ -9,6 +9,8 @@
 
 #include "workflow/get_public_worker_name.hpp"
 
+#include <unistd.h>
+
 namespace dart
 {
   static bool already_loaded = false;
@@ -34,7 +36,7 @@ namespace dart
     boost::property_tree::ptree content;
     boost::property_tree::json_parser::read_json(config_file, content);
         
-    worker_config.name = content.get("name", get_public_worker_name(internal_name));
+    worker_config.name = get_public_worker_name(internal_name);
     worker_config.host = content.get("host", boost::asio::ip::host_name());
     worker_config.python_home = content.get("python_home", "");
     worker_config.module_prefix = content.get("module_prefix", "");

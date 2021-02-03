@@ -55,7 +55,7 @@ std::vector<std::tuple<std::string, job_status, job_config>> ram::get_jobs() con
   jobs.reserve(_jobs.size());
 
   for (auto& job : _jobs)
-    jobs.push_back({ job.first, job.second.first, job.second.second });
+    jobs.push_back(std::tuple<std::string, job_status, job_config>( job.first, job.second.first, job.second.second ));
 
   return jobs;
 }

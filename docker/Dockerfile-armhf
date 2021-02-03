@@ -1,17 +1,18 @@
-FROM quay.io/pypa/manylinux2014_x86_64
+FROM armv7/armhf-ubuntu:16.04
 
 RUN mkdir build && cd build
 
-RUN yum -y update && yum -y install \
-  wget \
-  openssl-devel \
-  hwloc-devel.x86_64 \
-  chrpath.x86_64 \
-  python-devel.x86_64 \
-  numactl-devel.x86_64
+RUN apt -y update && apt -y install \
+  gcc g++ make gawk wget git \
+  libssl-dev \
+  libhwloc-dev \
+  chrpath \
+  python-all-dev \
+  pkg-config \
+  openssl
 
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.19.1/cmake-3.19.1.tar.gz
-RUN tar -xzf cmake-3.19.1.tar.gz && rm cmake-3.19.1.tar.gz && cd cmake-3.19.1 && bash ./bootstrap && gmake install
+RUN tar -xzf cmake-3.19.1.tar.gz && rm cmake-3.19.1.tar.gz && cd cmake-3.19.1 && bash ./bootstrap && make install
 RUN cd .. && rm -r cmake-3.19.1
 
 RUN wget https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz/download
@@ -24,12 +25,13 @@ RUN cd boost_1_63_0 && bash bootstrap.sh --prefix="${BOOST_ROOT}" && ./b2 \
 RUN cd .. && rm -r boost_1_63_0
 
 RUN wget https://github.com/cc-hpc-itwm/GPI-2/archive/v1.3.2.tar.gz
-RUN tar -xzf v1.3.2.tar.gz && rm v1.3.2.tar.gz && cd GPI-2-1.3.2 && ./install.sh --with-ethernet --with-fortran=false
+ADD gpi2-armv7l.patch /build/
+RUN tar -xzf v1.3.2.tar.gz && rm v1.3.2.tar.gz && cd GPI-2-1.3.2 && git apply /build/gpi2-armhf.patch && ./install.sh --with-ethernet --with-fortran=false
 RUN cd .. && rm -r GPI-2-1.3.2
 ENV PATH=${PATH}:/opt/GPI2/bin
 ENV PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:/opt/GPI2/lib64/pkgconfig
 
-RUN git clone --depth 1 --shallow-submodules --recursive --branch libssh2-1.9.0 https://github.com/libssh2/libssh2.git libssh2
+RUN git clone --depth 1 --recursive --branch libssh2-1.9.0 https://github.com/libssh2/libssh2.git libssh2
 RUN cmake -D CRYPTO_BACKEND=OpenSSL -D CMAKE_BUILD_TYPE=Release -D ENABLE_ZLIB_COMPRESSION=ON -D CMAKE_CXX_FLAGS="-fPIC" -DCMAKE_C_FLAGS="-fPIC" -B libssh2/build -S libssh2
 RUN cmake --build libssh2/build --target install
 ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}
@@ -37,7 +39,8 @@ RUN rm -r libssh2
 
 RUN git clone https://github.com/cc-hpc-itwm/gpispace
 ADD gspc-20.12-no-qt-no-tests.patch /build/
-RUN cd gpispace && git apply /build/gspc-20.12-no-qt-no-tests.patch && rm /build/gspc-20.12-no-qt-no-tests.patch
+ADD gspc-armhf.patch /build/
+RUN cd gpispace && git apply /build/gspc-20.12-no-qt-no-tests.patch && git apply /build/gspc-armhf.patch && rm /build/gspc-20.12-no-qt-no-tests.patch && rm /build/gspc-armhf.patch
 ENV GPISPACE_SOURCE_DIR=${PWD}/gpispace
 ENV GPISPACE_BUILD_DIR=${PWD}/gspc-build
 ENV GPISPACE_INSTALL_DIR=${PWD}/gspc-install

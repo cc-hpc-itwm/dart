@@ -92,8 +92,7 @@ class client:
     r = requests.post(self.server + "/job/", json={
         'key': self.key
       , 'name' : name
-      , 'module' : module_path
-      , 'is_module_path' : True
+      , 'module_path' : module_path
       , 'method' : method
       }, verify=False)
     if r.status_code != requests.codes.ok:

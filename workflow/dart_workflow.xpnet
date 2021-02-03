@@ -11,8 +11,7 @@
   </struct>
  
   <struct name="config">
-    <field name="path_to_module_or_module_content" type="string"/>
-    <field name="is_path" type="string"/>
+    <field name="module_path" type="string"/>
     <field name="method" type="string"/>
   </struct>
  
@@ -171,8 +170,7 @@
                    auto const py_res (run_python_task
                                         ( dart::worker_config.python_home
                                         , python_library
-                                        , config.path_to_module_or_module_content
-                                        , config.is_path
+                                        , config.module_path
                                         , config.method
                                         , location_and_parameters.task_parameters
                                         , dart::worker_config.name

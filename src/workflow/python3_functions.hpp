@@ -6,16 +6,18 @@
 namespace dart
 {
   typedef PyObject* Py_Initialize_t();
+  typedef int Py_IsInitialized_t();
   typedef void Py_Finalize_t();
   typedef wchar_t* Py_DecodeLocale_t (const char*, char*);
   typedef void Py_SetPythonHome_t (wchar_t*);
-  typedef void PyRun_SimpleStringFlags_t (const char*, char*);
+  typedef int PyRun_SimpleStringFlags_t (const char*, char*);
   typedef PyObject* PyUnicode_DecodeFSDefault_t (const char*);
   typedef PyObject* PyObject_Repr_t (PyObject*);
   typedef PyObject* Py_BuildValue_t (const char*, ...);
   typedef void Py_DecRef_t (PyObject*);
   typedef PyObject* PyImport_Import_t (PyObject*);
   typedef PyObject* PyImport_ImportModule_t (const char*);
+  typedef int PyObject_HasAttrString_t(PyObject*, const char*);
   typedef PyObject* PyObject_GetAttrString_t (PyObject*, const char*);
   typedef PyObject* PyUnicode_FromString_t (const char*);
   typedef PyObject* PyUnicode_AsEncodedString_t (PyObject*, const char*, const char*);
@@ -30,8 +32,13 @@ namespace dart
   typedef void PyErr_NormalizeException_t (PyObject**, PyObject**, PyObject**);
   typedef void PyErr_Fetch_t (PyObject**, PyObject**, PyObject**);
   typedef void PyErr_Print_t();
-
+  typedef PyObject* PySys_GetObject_t(const char*);
+  typedef int PyObject_SetAttrString_t(PyObject*, const char*, PyObject*);
+  typedef int PyArg_ParseTuple_t(PyObject*, const char*, ...);
+  typedef PyObject* PyCFunction_NewEx_t(PyMethodDef*, PyObject*, PyObject*);
+  
   Py_Initialize_t* Py_Initialize (nullptr);
+  Py_IsInitialized_t* Py_IsInitialized (nullptr);
   Py_Finalize_t* Py_Finalize(nullptr);
   Py_DecodeLocale_t* Py_DecodeLocale (nullptr);
   Py_SetPythonHome_t* Py_SetPythonHome (nullptr);
@@ -42,6 +49,7 @@ namespace dart
   Py_DecRef_t* Py_DecRef (nullptr);
   PyImport_Import_t* PyImport_Import (nullptr);
   PyImport_ImportModule_t* PyImport_ImportModule (nullptr);
+  PyObject_HasAttrString_t* PyObject_HasAttrString(nullptr);
   PyObject_GetAttrString_t* PyObject_GetAttrString (nullptr);
   PyUnicode_FromString_t* PyUnicode_FromString (nullptr);
   PyUnicode_AsEncodedString_t* PyUnicode_AsEncodedString (nullptr);
@@ -55,5 +63,9 @@ namespace dart
   PyErr_Occurred_t* PyErr_Occurred (nullptr);
   PyErr_NormalizeException_t* PyErr_NormalizeException (nullptr);
   PyErr_Fetch_t* PyErr_Fetch (nullptr);
-  PyErr_Print_t* PyErr_Print (nullptr);
+  PyErr_Print_t* PyErr_Print(nullptr);
+  PySys_GetObject_t* PySys_GetObject(nullptr); 
+  PyObject_SetAttrString_t* PyObject_SetAttrString(nullptr);
+  PyArg_ParseTuple_t* PyArg_ParseTuple(nullptr);
+  PyCFunction_NewEx_t* PyCFunction_NewEx(nullptr);
 }

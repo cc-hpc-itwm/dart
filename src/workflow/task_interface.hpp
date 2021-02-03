@@ -46,13 +46,6 @@ bool close_library(void* pLib, std::string* pError)
   }
 }
 
-struct on_scope_exit_finalize_python_and_close_library
-{
-  void* _lib;
-  on_scope_exit_finalize_python_and_close_library(void* pLib) : _lib(pLib) { }
-  ~on_scope_exit_finalize_python_and_close_library() { dart::Py_Finalize(); std::string _; close_library(_lib, &_); }
-};
-
 #define LOAD_PYTHON_SYMBOL(name) \
   dart::name = (dart::name##_t*)::dlsym (pLib, #name); \
   if (dart::name == NULL) \
@@ -65,6 +58,7 @@ struct on_scope_exit_finalize_python_and_close_library
 bool load_symbols (void* pLib, std::string* pError)
 {
   LOAD_PYTHON_SYMBOL (Py_Initialize)
+  LOAD_PYTHON_SYMBOL (Py_IsInitialized)
   LOAD_PYTHON_SYMBOL (Py_Finalize)
   LOAD_PYTHON_SYMBOL (Py_DecodeLocale)
   LOAD_PYTHON_SYMBOL (Py_SetPythonHome)
@@ -90,26 +84,58 @@ bool load_symbols (void* pLib, std::string* pError)
   LOAD_PYTHON_SYMBOL (PyUnicode_AsASCIIString)
   LOAD_PYTHON_SYMBOL (PyErr_Print)
   LOAD_PYTHON_SYMBOL (Py_BuildValue)
+  LOAD_PYTHON_SYMBOL (PySys_GetObject)
+  LOAD_PYTHON_SYMBOL (PyObject_HasAttrString)
+  LOAD_PYTHON_SYMBOL (PyObject_SetAttrString)
+  LOAD_PYTHON_SYMBOL (PyArg_ParseTuple)
+  LOAD_PYTHON_SYMBOL (PyCFunction_NewEx)
 
   return true;
+}
+
+namespace 
+{
+  static std::ofstream logfile;
+}
+
+static PyObject* capture_stdout(PyObject* self, PyObject* args)
+{
+  char* string;
+  if (dart::PyArg_ParseTuple(args, "s", &string))
+  {
+    logfile << "[Python stdout] " << string << std::endl;
+  }
+
+  return dart::Py_BuildValue("");
+}
+
+static PyObject* capture_stderr(PyObject* self, PyObject* args)
+{
+  char* string;
+  if (dart::PyArg_ParseTuple(args, "s", &string))
+  {
+    logfile << "[Python stderr] " << string << std::endl;
+  }
+
+  return dart::Py_BuildValue("");
 }
 
 std::pair<std::string, std::vector<char>> run_python_task
   ( std::string const& python_home
   , std::string const& python_library
-  , std::string const& path_to_module_or_module_content
-  , std::string const& is_path
+  , std::string const& path_to_module
   , std::string const& method
   , std::string const& method_params
   , std::string const& //worker
   , std::string const& log_file
   )
 {
-  std::ofstream log(log_file);
+  logfile = std::ofstream(log_file, std::ios::app);
+  logfile << std::endl;
+
   void* pLib (nullptr);
   std::string error;
 
-  log << "loading library" << std::endl;
   if (!load_library (python_library, &pLib, &error))
   {
     std::string err_msg ("Could not open  the library \""
@@ -117,47 +143,91 @@ std::pair<std::string, std::vector<char>> run_python_task
 			            + "\": "
 			            + error
 			            );
+    logfile << err_msg << std::endl;
     return std::make_pair (err_msg, std::vector<char>());
   }
 
-  log << "loading symbols" << std::endl;
   if (!load_symbols (pLib, &error))
   {
+    logfile << error << std::endl;
     return std::make_pair (error, std::vector<char>());
   }
-
-  on_scope_exit_finalize_python_and_close_library scope_guard(pLib);
-
+  
   PyObject *pModule, *pFunc;
 
-  log << "setting home" << std::endl;
-  wchar_t *pyhome = dart::Py_DecodeLocale (python_home.c_str(), NULL);
+  if (dart::Py_IsInitialized() == 0) // not initialized
+  {
+    logfile << "Initializing Python" << std::endl;
+    wchar_t* pyhome = dart::Py_DecodeLocale(python_home.c_str(), NULL);
 
-  dart::Py_SetPythonHome (pyhome);
-  dart::Py_Initialize();
+    dart::Py_SetPythonHome(pyhome);
+    dart::Py_Initialize();
+  }
 
   std::string path = "";
   std::string module = "";
-  if (is_path == "true")
   {
-    auto last = path_to_module_or_module_content.find_last_of("/");
-    path = dart::worker_config.module_prefix + 
-      path_to_module_or_module_content.substr(0, last + 1);
-    module = path_to_module_or_module_content.substr(last + 1);
+    auto last = path_to_module.find_last_of("/");
+    path = dart::worker_config.module_prefix + path_to_module.substr(0, last + 1);
+    module = path_to_module.substr(last + 1);
   }
-  else
-  {
-    path = ".";
-    std::ofstream mod("mod.py");
-    mod << path_to_module_or_module_content;
-    mod.close();
-    module = "mod.py";
-  }
-  log << "using module (" << module << ") with path (" << path << ")" << std::endl;
+  logfile << "using module (" << module << ") with path (" << path << ")" << std::endl;
   dart::PyRun_SimpleStringFlags("import sys", NULL);
   std::ostringstream osstr;
-  osstr << "sys.path.append ('" << path << "')";
-  dart::PyRun_SimpleStringFlags(osstr.str().c_str(), NULL);
+  osstr << "if not '" << path << "' in sys.path: sys.path.append ('" << path << "')";
+  if (dart::PyRun_SimpleStringFlags(osstr.str().c_str(), NULL) < 0)
+    return handle_error();
+
+  // Catch stdout and stderr
+  {
+    {
+      std::ostringstream stream;
+      stream
+        << "class __dart_out :\n"
+        << "  def __init__(self) :\n"
+        << "    pass\n"
+        << "  def write(self, txt) :\n"
+        << "    pass\n"
+        << "  def flush(self) :\n"
+        << "    pass\n"
+        << "if sys.stderr == None:\n"
+        << "  sys.stderr = __dart_out()\n"
+        << "if sys.stdout == None:\n"
+        << "  sys.stdout = __dart_out()\n";
+      if (dart::PyRun_SimpleStringFlags(stream.str().c_str(), NULL) < 0)
+        return handle_error();
+    }
+
+    {
+      PyCFunction func = capture_stdout;
+      PyMethodDef method = { "capture_stdout_function", func, METH_VARARGS, "" };
+      PyObject* log_capture = dart::PyCFunction_NewEx(&method, NULL, NULL);
+
+      auto* std_obj = dart::PySys_GetObject("stdout");
+      if (std_obj != nullptr)
+      {
+        if (dart::PyObject_SetAttrString(std_obj, "write", log_capture) == -1)
+        {
+          return handle_error();
+        }
+      }
+    }
+
+    {
+      PyCFunction func = capture_stderr;
+      PyMethodDef method = PyMethodDef{ "capture_stderr_function", func, METH_VARARGS, "" };
+      PyObject* log_capture = dart::PyCFunction_NewEx(&method, NULL, NULL);
+      auto* std_obj = dart::PySys_GetObject("stderr");
+      if (std_obj != nullptr)
+      {
+        if (dart::PyObject_SetAttrString(std_obj, "write", log_capture) == -1)
+        {
+          return handle_error();
+        }
+      }
+    }
+  }
+  
   pModule = dart::PyImport_ImportModule(module.c_str());
  
   if (pModule != NULL)
@@ -166,12 +236,7 @@ std::pair<std::string, std::vector<char>> run_python_task
 
     if (pFunc && dart::PyCallable_Check (pFunc))
     {
-      log << method_params << std::endl;
       PyObject* params = dart::PyUnicode_FromString (method_params.c_str());
-
-      std::ofstream ofslog (log_file.c_str(), std::ofstream::app);
-      ofslog << std::endl;
-
       PyObject* res (dart::PyObject_CallFunctionObjArgs (pFunc, params, NULL));
       if (!res)
       {
@@ -182,48 +247,11 @@ std::pair<std::string, std::vector<char>> run_python_task
           err_msg = handle_error().first;
         }
 
-        PyObject* catch_err = dart::PyObject_GetAttrString (pModule,"catch_stderr");
-
-        if (catch_err)
-        {
-          dart::PyErr_Print();
-
-          PyObject* output = dart::PyObject_GetAttrString (catch_err,"value");
-          PyObject* pyStr = dart::PyUnicode_AsEncodedString (output, "utf-8","Error ~");
-
-          err_msg += (dart::PyBytes_AsString (pyStr));
-
-          dart::Py_DecRef (output);
-          dart::Py_DecRef (pyStr);
-          dart::Py_DecRef (catch_err);
-          dart::Py_DecRef (params);
-          dart::Py_DecRef (pFunc);
-          dart::Py_DecRef (pModule);
-        }
-
-        ofslog << "Error: " << err_msg << std::endl;
+        logfile << "Python Error: " << err_msg << std::endl;
 
         return std::make_pair (err_msg, std::vector<char>());
       }
-
-      PyObject* catch_out = dart::PyObject_GetAttrString (pModule,"catch_stdout");
-      if (catch_out)
-      {
-        PyObject* output = dart::PyObject_GetAttrString (catch_out,"value");
-        PyObject* pyStr = dart::PyUnicode_AsEncodedString (output, "utf-8","Error ~");
-
-        std::ostringstream osstr;
-        osstr << dart::PyBytes_AsString (pyStr);
-        if (!osstr.str().empty())
-        {
-          ofslog << "Logging info: \n" << osstr.str() << std::endl;
-        }
-
-        dart::Py_DecRef (output);
-        dart::Py_DecRef (pyStr);
-        dart::Py_DecRef (catch_out);
-      }
-
+      
       Py_buffer view;
       if (dart::PyObject_GetBuffer (res, &view, PyBUF_C_CONTIGUOUS | PyBUF_SIMPLE) < 0)
       {
@@ -252,8 +280,6 @@ std::pair<std::string, std::vector<char>> run_python_task
   {
     return handle_error();
   }
-
-  close_library (pLib, &error);
 
   return {};
 }

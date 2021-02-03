@@ -1,3 +1,21 @@
+# 2021-02-03
+## Added
+   - Experimental Dockerfile for building an armhf image
+   - Dockerimages do not require qt no longer
+   - Added some command line options for dart-server
+   - Auto redirect stdout and stderr from Python to the log file
+   - Script to start worker manually
+## Removed
+   - `name` entry in `worker.json`
+
+## API Changes
+   - `job.config` has been reworked
+   - `result` now contains an additional field names `host`
+## Fixes
+   - Fixed `GET /server/` API Call
+   - Error Handling for `add_worker` and `remove_worker` in `gspc_interface`
+   - Python does not anymore gets cleaned up as this seems to make problems with numpy
+
 # 2021-01-18
 ## Added
    - `get results` API call now accepts an additional parameter `worker_regex` that specifies a regular expression that the worker name of the results must match

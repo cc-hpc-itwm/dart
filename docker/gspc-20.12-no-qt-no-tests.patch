@@ -1,0 +1,632 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9e032f6..42106bd 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -99,7 +99,7 @@ find_boost (1.61 REQUIRED QUIET COMPONENTS
+ find_package (GASPI 1.3.2 REQUIRED QUIET)
+ find_package (HWLOC REQUIRED QUIET)
+ find_package (LibRT REQUIRED QUIET)
+-find_package (Qt5 COMPONENTS Core Gui Widgets Xml Network REQUIRED QUIET)
++#find_package (Qt5 COMPONENTS Core Gui Widgets Xml Network REQUIRED QUIET)
+ find_package (Threads REQUIRED QUIET)
+ 
+ include (CTest)
+@@ -142,19 +142,19 @@ add_subdirectory (external)
+ add_subdirectory (doc)
+ add_subdirectory (share)
+ add_subdirectory (src)
+-add_subdirectory (test)
+-
+-add_test (NAME installed_headers_are_selfcontained
+-  COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/installed_headers_are_selfcontained.sh"
+-          "${CMAKE_INSTALL_PREFIX}"
+-          "${CMAKE_CXX_COMPILER}"
+-)
+-set_property (TEST installed_headers_are_selfcontained
+-  APPEND PROPERTY LABELS "requires_installation"
+-)
+-set_property (TEST installed_headers_are_selfcontained
+-  APPEND PROPERTY REQUIRED_FILES ${FILES_REQUIRED_IN_INSTALLATION}
+-)
++#add_subdirectory (test)
++
++#add_test (NAME installed_headers_are_selfcontained
++#  COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/installed_headers_are_selfcontained.sh"
++#          "${CMAKE_INSTALL_PREFIX}"
++#          "${CMAKE_CXX_COMPILER}"
++#)
++#set_property (TEST installed_headers_are_selfcontained
++#  APPEND PROPERTY LABELS "requires_installation"
++#)
++#set_property (TEST installed_headers_are_selfcontained
++#  APPEND PROPERTY REQUIRED_FILES ${FILES_REQUIRED_IN_INSTALLATION}
++#)
+ 
+ install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/README.md"
+   DESTINATION "share/gspc/"
+diff --git a/doc/CMakeLists.txt b/doc/CMakeLists.txt
+index 0a7adee..1d69c12 100644
+--- a/doc/CMakeLists.txt
++++ b/doc/CMakeLists.txt
+@@ -14,8 +14,8 @@
+ # You should have received a copy of the GNU General Public License
+ # along with this program. If not, see <https://www.gnu.org/licenses/>.
+ 
+-add_subdirectory (readme)
+-add_subdirectory (tutorial)
++#add_subdirectory (readme)
++#add_subdirectory (tutorial)
+ 
+ install (DIRECTORY gspc-monitor
+   DESTINATION share/gspc
+diff --git a/share/CMakeLists.txt b/share/CMakeLists.txt
+index 5c1581f..63eeccd 100644
+--- a/share/CMakeLists.txt
++++ b/share/CMakeLists.txt
+@@ -14,9 +14,9 @@
+ # You should have received a copy of the GNU General Public License
+ # along with this program. If not, see <https://www.gnu.org/licenses/>.
+ 
+-add_subdirectory (example)
++#add_subdirectory (example)
+ add_subdirectory (gspc)
+ add_subdirectory (lib)
+ add_subdirectory (man)
+-add_subdirectory (selftest)
++#add_subdirectory (selftest)
+ add_subdirectory (xsd)
+diff --git a/share/lib/cache/CMakeLists.txt b/share/lib/cache/CMakeLists.txt
+index a0d593e..9852e41 100644
+--- a/share/lib/cache/CMakeLists.txt
++++ b/share/lib/cache/CMakeLists.txt
+@@ -25,4 +25,4 @@ install (FILES
+   DESTINATION ${PNETC_LIB_DIR}/cache
+   )
+ 
+-add_subdirectory (demo)
++#add_subdirectory (demo)
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 6395abb..bf02367 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -24,13 +24,13 @@ extended_add_library (NAME fhgcom
+             OpenSSL::SSL
+             OpenSSL::Crypto
+ )
+-add_subdirectory (fhgcom/tests)
++#add_subdirectory (fhgcom/tests)
+ 
+ add_subdirectory (gpi-space)
+ add_subdirectory (vmem)
+ 
+-  add_subdirectory (pnete)
+-  add_subdirectory (util)
++#  add_subdirectory (pnete)
++#  add_subdirectory (util)
+ 
+ extended_add_library (NAME pnet
+   SOURCES "we/exception.cpp"
+@@ -154,8 +154,8 @@ extended_add_library (NAME pnet
+   COMPILE_DEFINITIONS -DHAS_STD_ALIGN=$<BOOL:${HAS_STD_ALIGN}>
+ )
+ 
+-add_subdirectory (xml/tests)
+-add_subdirectory (xml/parse/type/test)
++#add_subdirectory (xml/tests)
++#add_subdirectory (xml/parse/type/test)
+ 
+ add_subdirectory (we)
+ add_subdirectory (mmgr)
+@@ -169,7 +169,7 @@ add_subdirectory (rif)
+ add_subdirectory (sdpa)
+ add_subdirectory (fhg)
+ add_subdirectory (util-generic)
+-add_subdirectory (util-qt)
++#add_subdirectory (util-qt)
+ 
+ extended_add_library (NAME logging
+   NAMESPACE gspc
+@@ -216,54 +216,54 @@ extended_add_executable (NAME gspc-logging-to-stdout
+   INSTALL INSTALL_DESTINATION "bin"
+ )
+ 
+-add_unit_test (NAME logging_endpoint
+-  SOURCES "logging/test/endpoint.cpp"
+-  LIBRARIES Util::Generic
+-            gspc::logging
+-  USE_BOOST
+-)
++#add_unit_test (NAME logging_endpoint
++#  SOURCES "logging/test/endpoint.cpp"
++#  LIBRARIES Util::Generic
++#            gspc::logging
++#  USE_BOOST
++#)
+ 
+-add_unit_test (NAME logging_file_sink
+-  SOURCES "logging/test/file_sink.cpp"
+-  LIBRARIES Util::Generic
+-            gspc::logging
+-  USE_BOOST
+-)
++#add_unit_test (NAME logging_file_sink
++#  SOURCES "logging/test/file_sink.cpp"
++#  LIBRARIES Util::Generic
++#            gspc::logging
++#  USE_BOOST
++#)
+ 
+-add_unit_test (NAME logging_ostream_redirect
+-  SOURCES "logging/test/ostream_redirect.cpp"
+-  LIBRARIES Util::Generic
+-            gspc::logging
+-  USE_BOOST
+-)
++#add_unit_test (NAME logging_ostream_redirect
++#  SOURCES "logging/test/ostream_redirect.cpp"
++#  LIBRARIES Util::Generic
++#            gspc::logging
++#  USE_BOOST
++#)
+ 
+-add_unit_test (NAME logging_socket_endpoint
+-  SOURCES "logging/test/socket_endpoint.cpp"
+-  LIBRARIES Util::Generic
+-            gspc::logging
+-  USE_BOOST
+-)
++#add_unit_test (NAME logging_socket_endpoint
++#  SOURCES "logging/test/socket_endpoint.cpp"
++#  LIBRARIES Util::Generic
++#            gspc::logging
++#  USE_BOOST
++#)
+ 
+-add_unit_test (NAME logging_stream_emitter
+-  SOURCES "logging/test/stream_emitter.cpp"
+-  LIBRARIES Util::Generic
+-            gspc::logging
+-  USE_BOOST
+-)
++#add_unit_test (NAME logging_stream_emitter
++#  SOURCES "logging/test/stream_emitter.cpp"
++#  LIBRARIES Util::Generic
++#            gspc::logging
++#  USE_BOOST
++#)
+ 
+-add_unit_test (NAME logging_stream_receiver
+-  SOURCES "logging/test/stream_receiver.cpp"
+-  LIBRARIES Util::Generic
+-            gspc::logging
+-  USE_BOOST
+-)
++#add_unit_test (NAME logging_stream_receiver
++#  SOURCES "logging/test/stream_receiver.cpp"
++#  LIBRARIES Util::Generic
++#            gspc::logging
++#  USE_BOOST
++#)
+ 
+-add_unit_test (NAME logging_tcp_endpoint
+-  SOURCES "logging/test/tcp_endpoint.cpp"
+-  LIBRARIES Util::Generic
+-            gspc::logging
+-  USE_BOOST
+-)
++#add_unit_test (NAME logging_tcp_endpoint
++#  SOURCES "logging/test/tcp_endpoint.cpp"
++#  LIBRARIES Util::Generic
++#            gspc::logging
++#  USE_BOOST
++#)
+ 
+ install (FILES
+   logging/tcp_endpoint.hpp
+diff --git a/src/drts/CMakeLists.txt b/src/drts/CMakeLists.txt
+index 84612d3..149ab56 100644
+--- a/src/drts/CMakeLists.txt
++++ b/src/drts/CMakeLists.txt
+@@ -62,15 +62,15 @@ extended_add_library (NAME gspc
+   CREATE_BUNDLE_INFO
+ )
+ 
+-add_subdirectory (test/add_worker)
+-add_subdirectory (test/remove_worker)
+-add_subdirectory (test/parallel_running_workflows)
+-add_subdirectory (test/put_token)
+-add_subdirectory (test/workflow_response)
+-add_subdirectory (test/forbid_double_worker_instances)
+-add_subdirectory (test/use_fixed_ports_for_agents_and_workers)
+-add_subdirectory (test/multiple_module_implementations)
+-add_subdirectory (test/work_stealing)
+-add_subdirectory (test/run_bunch_of_tasks)
+-add_subdirectory (test/using_ranges_and_buffers_in_memory_transfers)
+-add_subdirectory (test)
++#add_subdirectory (test/add_worker)
++#add_subdirectory (test/remove_worker)
++#add_subdirectory (test/parallel_running_workflows)
++#add_subdirectory (test/put_token)
++#add_subdirectory (test/workflow_response)
++#add_subdirectory (test/forbid_double_worker_instances)
++#add_subdirectory (test/use_fixed_ports_for_agents_and_workers)
++#add_subdirectory (test/multiple_module_implementations)
++#add_subdirectory (test/work_stealing)
++#add_subdirectory (test/run_bunch_of_tasks)
++#add_subdirectory (test/using_ranges_and_buffers_in_memory_transfers)
++#add_subdirectory (test)
+diff --git a/src/fhg/CMakeLists.txt b/src/fhg/CMakeLists.txt
+index 7b35456..8137caa 100644
+--- a/src/fhg/CMakeLists.txt
++++ b/src/fhg/CMakeLists.txt
+@@ -58,7 +58,7 @@ extended_add_library (NAME fhg-util
+             Boost::filesystem
+ )
+ 
+-add_subdirectory (util/test)
++#add_subdirectory (util/test)
+ 
+ install (FILES
+   util/dl.hpp
+diff --git a/src/gpi-space/CMakeLists.txt b/src/gpi-space/CMakeLists.txt
+index b52ea5f..4d1a8e2 100644
+--- a/src/gpi-space/CMakeLists.txt
++++ b/src/gpi-space/CMakeLists.txt
+@@ -79,5 +79,5 @@ extended_add_library (NAME gpi_type_check
+   LIBRARIES gpi-space-gpiapi
+ )
+ 
+-add_subdirectory (pc/test)
+-add_subdirectory (tests)
++#add_subdirectory (pc/test)
++#add_subdirectory (tests)
+diff --git a/src/mmgr/CMakeLists.txt b/src/mmgr/CMakeLists.txt
+index f32fca3..9fee1db 100644
+--- a/src/mmgr/CMakeLists.txt
++++ b/src/mmgr/CMakeLists.txt
+@@ -20,4 +20,4 @@ extended_add_library (NAME mmgr
+   LIBRARIES Boost::base
+ )
+ 
+-add_subdirectory (tests)
++#add_subdirectory (tests)
+diff --git a/src/rif/CMakeLists.txt b/src/rif/CMakeLists.txt
+index aa9bb4f..988855c 100644
+--- a/src/rif/CMakeLists.txt
++++ b/src/rif/CMakeLists.txt
+@@ -47,14 +47,14 @@ install (FILES
+   DESTINATION include/rif
+ )
+ 
+-add_unit_test (NAME started_process_promise
+-  SOURCES "test/started_process_promise.cpp"
+-
+-  DESCRIPTION "pipe used for communicating with a rif-started process during startup"
+-  USE_BOOST
+-  LIBRARIES rif-started_process_promise
+-            Util-Generic
+-)
++#add_unit_test (NAME started_process_promise
++#  SOURCES "test/started_process_promise.cpp"
++#
++#  DESCRIPTION "pipe used for communicating with a rif-started process during startup"
++#  USE_BOOST
++#  LIBRARIES rif-started_process_promise
++#            Util-Generic
++#)
+ 
+ extended_add_library (NAME rif-strategies
+   SOURCES "strategy/local.cpp"
+diff --git a/src/rpc/CMakeLists.txt b/src/rpc/CMakeLists.txt
+index 6782da1..4fe05ca 100644
+--- a/src/rpc/CMakeLists.txt
++++ b/src/rpc/CMakeLists.txt
+@@ -61,15 +61,15 @@ target_compile_definitions (RPC PUBLIC
+ )
+ 
+ function (rpc_unit_test _path)
+-  _parse_arguments_with_unknown (ARG "" "" "LIBRARIES;SOURCES" "" ${ARGN})
+-  string (REPLACE "/" "-" _name "rpc-${_path}")
+-
+-  add_unit_test (NAME "${_name}"
+-    SOURCES "test/${_path}.cpp" ${ARG_SOURCES}
+-    USE_BOOST
+-    LIBRARIES RPC ${ARG_LIBRARIES}
+-    ${ARG_UNPARSED_ARGUMENTS}
+-  )
++#  _parse_arguments_with_unknown (ARG "" "" "LIBRARIES;SOURCES" "" ${ARGN})
++#  string (REPLACE "/" "-" _name "rpc-${_path}")
++#
++#  add_unit_test (NAME "${_name}"
++#    SOURCES "test/${_path}.cpp" ${ARG_SOURCES}
++#    USE_BOOST
++#    LIBRARIES RPC ${ARG_LIBRARIES}
++#    ${ARG_UNPARSED_ARGUMENTS}
++#  )
+ endfunction()
+ 
+ rpc_unit_test (basic)
+@@ -83,7 +83,7 @@ rpc_unit_test (locked_with_info_file)
+ rpc_unit_test (many_threads_hammer_one_server RUN_SERIAL)
+ 
+ rpc_unit_test (performance PERFORMANCE_TEST)
+-set_tests_properties (rpc-performance PROPERTIES TIMEOUT 300)
++#set_tests_properties (rpc-performance PROPERTIES TIMEOUT 300)
+ 
+ rpc_unit_test (socket)
+ 
+diff --git a/src/sdpa/CMakeLists.txt b/src/sdpa/CMakeLists.txt
+index 5f83607..4402ced 100644
+--- a/src/sdpa/CMakeLists.txt
++++ b/src/sdpa/CMakeLists.txt
+@@ -41,6 +41,6 @@ target_link_libraries (sdpa
+   gspc::logging
+ )
+ 
+-add_subdirectory (test)
+-add_subdirectory (test/bin)
+-add_subdirectory (test/sdpa)
++#add_subdirectory (test)
++#add_subdirectory (test/bin)
++#add_subdirectory (test/sdpa)
+diff --git a/src/util-generic/CMakeLists.txt b/src/util-generic/CMakeLists.txt
+index 93fe006..7f7a1c3 100644
+--- a/src/util-generic/CMakeLists.txt
++++ b/src/util-generic/CMakeLists.txt
+@@ -191,32 +191,32 @@ extended_add_library (NAME Generic
+ 
+ 
+ function (util_generic_unit_test _path)
+-  _parse_arguments_with_unknown (ARG
+-    "" "" "LIBRARIES;SOURCES;REQUIRE_FAIL" "" ${ARGN}
+-  )
+-  string (REPLACE "/" "-" _name "util-generic-${_path}")
+-
+-  if (NOT ARG_REQUIRE_FAIL)
+-    add_unit_test (NAME "${_name}"
+-      SOURCES "test/${_path}.cpp" ${ARG_SOURCES}
+-      USE_BOOST
+-      LIBRARIES Util::Generic ${ARG_LIBRARIES}
+-      ${ARG_UNPARSED_ARGUMENTS}
+-    )
+-  else()
+-    # \todo move REQUIRE_FAIL support one level down to not recompile
+-    # for every case.
+-    foreach (_case ${ARG_REQUIRE_FAIL})
+-      add_unit_test (NAME "${_name}-${_case}"
+-        SOURCES "test/${_path}.cpp" ${ARG_SOURCES}
+-        USE_BOOST
+-        LIBRARIES Util::Generic ${ARG_LIBRARIES}
+-        ARGS --run_test="${_case}"
+-        ${ARG_UNPARSED_ARGUMENTS}
+-      )
+-      set_tests_properties ("${_name}-${_case}" PROPERTIES WILL_FAIL true)
+-    endforeach()
+-  endif()
++#  _parse_arguments_with_unknown (ARG
++#    "" "" "LIBRARIES;SOURCES;REQUIRE_FAIL" "" ${ARGN}
++#  )
++#  string (REPLACE "/" "-" _name "util-generic-${_path}")
++#
++#  if (NOT ARG_REQUIRE_FAIL)
++#    add_unit_test (NAME "${_name}"
++#      SOURCES "test/${_path}.cpp" ${ARG_SOURCES}
++#      USE_BOOST
++#      LIBRARIES Util::Generic ${ARG_LIBRARIES}
++#      ${ARG_UNPARSED_ARGUMENTS}
++#    )
++#  else()
++#    # \todo move REQUIRE_FAIL support one level down to not recompile
++#    # for every case.
++#    foreach (_case ${ARG_REQUIRE_FAIL})
++#      add_unit_test (NAME "${_name}-${_case}"
++#        SOURCES "test/${_path}.cpp" ${ARG_SOURCES}
++#        USE_BOOST
++#        LIBRARIES Util::Generic ${ARG_LIBRARIES}
++#        ARGS --run_test="${_case}"
++#        ${ARG_UNPARSED_ARGUMENTS}
++#      )
++#      set_tests_properties ("${_name}-${_case}" PROPERTIES WILL_FAIL true)
++#    endforeach()
++#  endif()
+ endfunction()
+ 
+ util_generic_unit_test (asynchronous)
+diff --git a/src/vmem/CMakeLists.txt b/src/vmem/CMakeLists.txt
+index 8c86328..89270ce 100644
+--- a/src/vmem/CMakeLists.txt
++++ b/src/vmem/CMakeLists.txt
+@@ -25,8 +25,8 @@ extended_add_library (NAME vmem
+             Boost::program_options
+ )
+ 
+-fhg_add_test (NAME vmem_netdev_id
+-  SOURCES "test/netdev_id.cpp"
+-  LIBRARIES GPISpace::vmem
+-  USE_BOOST
+-)
++#fhg_add_test (NAME vmem_netdev_id
++#  SOURCES "test/netdev_id.cpp"
++#  LIBRARIES GPISpace::vmem
++#  USE_BOOST
++#)
+diff --git a/src/we/CMakeLists.txt b/src/we/CMakeLists.txt
+index bd4d164..07164e4 100644
+--- a/src/we/CMakeLists.txt
++++ b/src/we/CMakeLists.txt
+@@ -102,10 +102,10 @@ install (FILES
+   DESTINATION include/we/plugin
+ )
+ 
+-add_subdirectory (expr/parse/test)
+-add_subdirectory (expr/test)
+-add_subdirectory (loader/test)
+-add_subdirectory (plugin/test)
++#add_subdirectory (expr/parse/test)
++#add_subdirectory (expr/test)
++#add_subdirectory (loader/test)
++#add_subdirectory (plugin/test)
+ add_subdirectory (plugins)
+-add_subdirectory (test)
+-add_subdirectory (type/test)
++#add_subdirectory (test)
++#add_subdirectory (type/test)
+diff --git a/src/we/plugins/CMakeLists.txt b/src/we/plugins/CMakeLists.txt
+index 038c66e..159dc99 100644
+--- a/src/we/plugins/CMakeLists.txt
++++ b/src/we/plugins/CMakeLists.txt
+@@ -34,20 +34,20 @@ extended_add_library (NAME Tunnel
+ )
+ 
+ function (test_Log case)
+-  fhg_add_test (NAME plugin_Log_${case}
+-    SOURCES test/Log/${case}/${case}.cpp
+-    USE_BOOST
+-    ARGS --gspc-home "${CMAKE_INSTALL_PREFIX}"
+-         --source-directory "${CMAKE_CURRENT_SOURCE_DIR}/test/Log/${case}"
+-         --shared-directory "${SHARED_DIRECTORY_FOR_TESTS}"
+-         --plugin-path "${CMAKE_INSTALL_PREFIX}/plugin/$<TARGET_FILE_NAME:Plugin::Log>"
+-    LIBRARIES gspc
+-              test-utilities
+-              fhg-util
+-              Boost::program_options
+-    REQUIRES_INSTALLATION
+-    START_SCOPED_RIF
+-  )
++#  fhg_add_test (NAME plugin_Log_${case}
++#    SOURCES test/Log/${case}/${case}.cpp
++#    USE_BOOST
++#    ARGS --gspc-home "${CMAKE_INSTALL_PREFIX}"
++#         --source-directory "${CMAKE_CURRENT_SOURCE_DIR}/test/Log/${case}"
++#         --shared-directory "${SHARED_DIRECTORY_FOR_TESTS}"
++#         --plugin-path "${CMAKE_INSTALL_PREFIX}/plugin/$<TARGET_FILE_NAME:Plugin::Log>"
++#    LIBRARIES gspc
++#              test-utilities
++#              fhg-util
++#              Boost::program_options
++#    REQUIRES_INSTALLATION
++#    START_SCOPED_RIF
++#  )
+ endfunction()
+ 
+ test_Log ("echo")
+@@ -55,20 +55,20 @@ test_Log ("create_and_call_after_in_one_transition")
+ test_Log ("call_before_and_destroy_in_one_transition")
+ 
+ function (test_Tunnel case)
+-  fhg_add_test (NAME plugin_Tunnel_${case}
+-    SOURCES test/Tunnel/${case}/${case}.cpp
+-    USE_BOOST
+-    ARGS --gspc-home "${CMAKE_INSTALL_PREFIX}"
+-         --source-directory "${CMAKE_CURRENT_SOURCE_DIR}/test/Tunnel/${case}"
+-         --shared-directory "${SHARED_DIRECTORY_FOR_TESTS}"
+-         --plugin-path "${CMAKE_INSTALL_PREFIX}/plugin/$<TARGET_FILE_NAME:Plugin::Tunnel>"
+-    LIBRARIES gspc
+-              test-utilities
+-              fhg-util
+-              Boost::program_options
+-    REQUIRES_INSTALLATION
+-    START_SCOPED_RIF
+-  )
++#  fhg_add_test (NAME plugin_Tunnel_${case}
++#    SOURCES test/Tunnel/${case}/${case}.cpp
++#    USE_BOOST
++#    ARGS --gspc-home "${CMAKE_INSTALL_PREFIX}"
++#         --source-directory "${CMAKE_CURRENT_SOURCE_DIR}/test/Tunnel/${case}"
++#         --shared-directory "${SHARED_DIRECTORY_FOR_TESTS}"
++#         --plugin-path "${CMAKE_INSTALL_PREFIX}/plugin/$<TARGET_FILE_NAME:Plugin::Tunnel>"
++#    LIBRARIES gspc
++#              test-utilities
++#              fhg-util
++#              Boost::program_options
++#    REQUIRES_INSTALLATION
++#    START_SCOPED_RIF
++#  )
+ endfunction()
+ 
+ test_Tunnel (subnetwork)
+diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
+index bec17ec..24d33f6 100644
+--- a/test/CMakeLists.txt
++++ b/test/CMakeLists.txt
+@@ -81,42 +81,42 @@ extended_add_library (NAME test-utilities
+   DEPENDS test-certificates
+ )
+ 
+-fhg_add_test (NAME many_ranges_in_memory_transfer
+-  SOURCES "many_ranges_in_memory_transfer/driver.cpp"
+-  USE_BOOST
+-  ARGS --gspc-home "${CMAKE_INSTALL_PREFIX}"
+-       --source-directory "${CMAKE_CURRENT_SOURCE_DIR}/many_ranges_in_memory_transfer"
+-       --shared-directory "${SHARED_DIRECTORY_FOR_TESTS}"
+-       --virtual-memory-startup-timeout 60
+-       --size-of-range 1000
+-       --distance-between-ranges 24
+-       --number-of-ranges 16384
+-  LIBRARIES gspc
+-            test-utilities
+-            fhg-util
+-            Boost::program_options
+-            Boost::filesystem
+-  REQUIRES_INSTALLATION
+-  REQUIRES_VIRTUAL_MEMORY
+-  START_SCOPED_RIF
+-)
++#fhg_add_test (NAME many_ranges_in_memory_transfer
++#  SOURCES "many_ranges_in_memory_transfer/driver.cpp"
++#  USE_BOOST
++#  ARGS --gspc-home "${CMAKE_INSTALL_PREFIX}"
++#       --source-directory "${CMAKE_CURRENT_SOURCE_DIR}/many_ranges_in_memory_transfer"
++#       --shared-directory "${SHARED_DIRECTORY_FOR_TESTS}"
++#       --virtual-memory-startup-timeout 60
++#       --size-of-range 1000
++#       --distance-between-ranges 24
++#       --number-of-ranges 16384
++#  LIBRARIES gspc
++#            test-utilities
++#            fhg-util
++#            Boost::program_options
++#            Boost::filesystem
++#  REQUIRES_INSTALLATION
++#  REQUIRES_VIRTUAL_MEMORY
++#  START_SCOPED_RIF
++#)
+ 
+-fhg_add_test (NAME many_ranges_in_memory_transfer_minimal
+-  SOURCES "many_ranges_in_memory_transfer/driver.cpp"
+-  USE_BOOST
+-  ARGS --gspc-home "${CMAKE_INSTALL_PREFIX}"
+-       --source-directory "${CMAKE_CURRENT_SOURCE_DIR}/many_ranges_in_memory_transfer"
+-       --shared-directory "${SHARED_DIRECTORY_FOR_TESTS}"
+-       --virtual-memory-startup-timeout 60
+-       --size-of-range 1
+-       --distance-between-ranges 0
+-       --number-of-ranges 16384
+-  LIBRARIES gspc
+-            test-utilities
+-            fhg-util
+-            Boost::program_options
+-            Boost::filesystem
+-  REQUIRES_INSTALLATION
+-  REQUIRES_VIRTUAL_MEMORY
+-  START_SCOPED_RIF
+-)
++#fhg_add_test (NAME many_ranges_in_memory_transfer_minimal
++#  SOURCES "many_ranges_in_memory_transfer/driver.cpp"
++#  USE_BOOST
++#  ARGS --gspc-home "${CMAKE_INSTALL_PREFIX}"
++#       --source-directory "${CMAKE_CURRENT_SOURCE_DIR}/many_ranges_in_memory_transfer"
++#       --shared-directory "${SHARED_DIRECTORY_FOR_TESTS}"
++#       --virtual-memory-startup-timeout 60
++#       --size-of-range 1
++#       --distance-between-ranges 0
++#       --number-of-ranges 16384
++#  LIBRARIES gspc
++#            test-utilities
++#            fhg-util
++#            Boost::program_options
++#            Boost::filesystem
++#  REQUIRES_INSTALLATION
++#  REQUIRES_VIRTUAL_MEMORY
++#  START_SCOPED_RIF
++#)

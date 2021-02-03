@@ -118,7 +118,7 @@ gspc_interface::gspc_interface(const installation& install, const boost::propert
       , _certificates
       );
 
-  auto information_to_reattach = gspc::information_to_reattach(*_drts);
+  gspc::information_to_reattach information_to_reattach(*_drts);
   auto string = information_to_reattach.to_string();
   pnet::type::value::value_type deserialized = pnet::type::value::from_string(string);
   {
@@ -148,16 +148,39 @@ void gspc_interface::add_workers(const std::vector<std::string>& hosts, unsigned
   log_message::info("[gspc_interface::add_workers] starting rifd");
   
   // Starting rifds on remote workers
-  auto rifds = gspc::rifds(
-      gspc::rifd::strategy(_vm)
-    , gspc::rifd::port(_vm)
-    , _installation
-    );
+  gspc::rifd::strategy strategy(_vm);
+  gspc::rifd::port port(_vm);
+  gspc::rifds rifds(strategy, port, _installation);
 
   // and bootstrapping them
   log_message::info("[gspc_interface::add_workers] bootstrapping rifds");
-  auto [entry_points, errors] = rifds.bootstrap(gspc::rifd::hostnames(hosts));
-  // TODO : Check for errors
+  auto _pair = rifds.bootstrap(gspc::rifd::hostnames(hosts));
+  auto entry_points = _pair.first;
+  auto errors = _pair.second;
+  {
+    std::string message;
+    for (auto& it : errors)
+    {
+      message += it.first + "(";
+      try
+      {
+        std::rethrow_exception(it.second);
+      }
+      catch (std::exception & exc)
+      {
+        message += exc.what();
+      }
+      message += ")\n";
+    }
+    if (errors.size() != 0)
+    {
+      log_message::error(
+        std::string("[gspc_interface::add_workers] couldn't bootstrap rifds")
+        + message
+      );
+      throw std::runtime_error(message.c_str());
+    }
+  }
 
   const gspc::worker_description description
   {
@@ -184,16 +207,40 @@ void gspc_interface::remove_workers(const std::vector<std::string>& hosts)
 {
   // Starting rifds on remote workers
   log_message::info("[gspc_interface::remove_workers] starting rifds");
-  auto rifds = gspc::rifds(
-    gspc::rifd::strategy(_vm)
-    , gspc::rifd::port(_vm)
-    , _installation
-  );
+  gspc::rifd::strategy strategy(_vm);
+  gspc::rifd::port port(_vm);
+  gspc::rifds rifds(strategy, port, _installation);
 
   // and bootstrapping them
   log_message::info("[gspc_interface::remove_workers] bootstrapping rifds");
-  auto [entry_points, errors] = rifds.bootstrap(gspc::rifd::hostnames(hosts));
-  // TODO : Check for errors
+  auto _pair = rifds.bootstrap(gspc::rifd::hostnames(hosts));
+  auto entry_points = _pair.first;
+  auto errors = _pair.second;
+  {
+    std::string message;
+    for (auto& it : errors)
+    {
+      message += it.first + "(";
+      try
+      {
+        std::rethrow_exception(it.second);
+      }
+      catch (std::exception & exc)
+      {
+        message += exc.what();
+      }
+      message += ")\n";
+    }
+    if (errors.size() != 0)
+    {
+      log_message::error(
+        std::string("[gspc_interface::remove_workers] couldn't bootstrap rifds")
+        + message
+      );
+      throw std::runtime_error(message.c_str());
+    }
+  }
+
   
   // Removing workers
   log_message::info("[gspc_interface::remove_workers] removing workers");
@@ -278,6 +325,7 @@ std::vector<result> gspc_interface::fetch_available_results()
           results.push_back(result{
               iter->first,
               task_result.worker,
+              task_result.host,
               task_result.location,
               task_result.start_time,
               task_result.duration,
@@ -313,6 +361,7 @@ std::vector<result> gspc_interface::fetch_available_results()
         results.push_back(result{
             iter->first,
             task_result.worker,
+            task_result.host,
             task_result.location,
             task_result.start_time,
             task_result.duration,
@@ -340,8 +389,8 @@ std::vector<result> gspc_interface::fetch_available_results()
       std::lock_guard<std::mutex> guard2(_jobs_mutex);
 
       _remaining_tasks.erase(job);
-      auto [start, end] = _jobs.equal_range(iter->first);
-      for (auto it = start; it != end; ++it)
+      auto range = _jobs.equal_range(iter->first);
+      for (auto it = range.first; it != range.second; ++it)
       {
         if (it->second == job)
         {
@@ -375,20 +424,16 @@ void gspc_interface::start_job(const std::string& job_name, const job_config& co
 
   log_message::info("[gspc_interface::start_job] created list");
   pnetc::type::config::config c(
-    config.path_to_module_or_module_content
-    , config.is_path ? "true" : "false"
+      config.module_path
     , config.method
   );
   log_message::info(std::string("[gspc_interface::start_job] config = ")
-  //  + "\n" + c.python_home
-    + "\n" + c.path_to_module_or_module_content
-    + "\n" + c.is_path
+    + "\n" + c.module_path
     + "\n" + c.method
-  //  + "\n" + c.output_directory
   );
   log_message::info("[gspc_interface::start_job] created config");
 
-  auto client = gspc::client(*_drts, _certificates);
+  gspc::client client(*_drts, _certificates);
   log_message::info("[gspc_interface::start_job] created client");
   auto wf = gspc::workflow(_workflow);
   log_message::info("[gspc_interface::start_job] created wf");
@@ -413,9 +458,9 @@ void gspc_interface::cancel_job(const std::string& job_name)
 {
   std::lock_guard<std::mutex> guard(_jobs_mutex);
   std::lock_guard<std::mutex> guard2(_remaining_tasks_mutex);
-  auto [iter, end] = _jobs.equal_range(job_name);
-  
-  for (; iter != end; ++iter)
+  auto range = _jobs.equal_range(job_name);
+  auto iter = range.first;
+  for (; iter != range.second; ++iter)
   {
     try
     {

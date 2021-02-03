@@ -4,8 +4,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <optional>
-
 #include "http/status_code.hpp"
 #include "http/version.hpp"
 #include "http/url.hpp"
