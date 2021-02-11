@@ -37,7 +37,9 @@ RUN rm -r libssh2
 
 RUN git clone https://github.com/cc-hpc-itwm/gpispace
 ADD gspc-20.12-no-qt-no-tests.patch /build/
+ADD gspc-20.12-portable-archive.patch /build/
 RUN cd gpispace && git apply /build/gspc-20.12-no-qt-no-tests.patch && rm /build/gspc-20.12-no-qt-no-tests.patch
+RUN cd gpispace && git apply /build/gspc-20.12-portable-archive.patch && rm /build/gspc-20.12-portable-archive.patch
 ENV GPISPACE_SOURCE_DIR=${PWD}/gpispace
 ENV GPISPACE_BUILD_DIR=${PWD}/gspc-build
 ENV GPISPACE_INSTALL_DIR=${PWD}/gspc-install

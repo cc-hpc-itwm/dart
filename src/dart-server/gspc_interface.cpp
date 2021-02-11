@@ -155,6 +155,7 @@ void gspc_interface::add_workers(const std::vector<std::string>& hosts, unsigned
   // and bootstrapping them
   log_message::info("[gspc_interface::add_workers] bootstrapping rifds");
   auto _pair = rifds.bootstrap(gspc::rifd::hostnames(hosts));
+  log_message::info("[gspc_interface::add_workers] bootstrapping rifds done");
   auto entry_points = _pair.first;
   auto errors = _pair.second;
   {

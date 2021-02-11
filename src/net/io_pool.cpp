@@ -1,5 +1,6 @@
 #include "net/io_pool.hpp"
 
+#include "log/log.hpp"
 #include <stdexcept>
 
 using namespace net;
@@ -22,7 +23,25 @@ void io_pool::run()
 {
   _threads.reserve(_services.size());
   for (auto& service : _services)
-    _threads.push_back(std::thread([&service]() { service->run(); }));
+    _threads.push_back(std::thread(
+      [&service]() {
+        while (true)
+        {
+          try
+          {
+            service->run();
+            return;
+          }
+          catch (std::exception & exc)
+          {
+            log_message::error(std::string("Error occured: ") + exc.what());
+          }
+          catch (...)
+          {
+            log_message::error(std::string("Unknown error occured"));
+          }
+        }
+      }));
 }
 
 void io_pool::wait()

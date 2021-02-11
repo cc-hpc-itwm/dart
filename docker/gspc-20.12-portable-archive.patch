@@ -1,0 +1,668 @@
+diff --git a/src/gpi-space/pc/client/api.cpp b/src/gpi-space/pc/client/api.cpp
+index 9258ae2..6db35f5 100644
+--- a/src/gpi-space/pc/client/api.cpp
++++ b/src/gpi-space/pc/client/api.cpp
+@@ -23,7 +23,7 @@
+ #include <util-generic/print_exception.hpp>
+ #include <util-generic/syscall.hpp>
+ 
+-#include <boost/archive/binary_oarchive.hpp>
++#include <boost/archive/text_oarchive.hpp>
+ #include <boost/archive/text_iarchive.hpp>
+ #include <boost/format.hpp>
+ #include <boost/range/adaptor/map.hpp>
+@@ -107,7 +107,7 @@ namespace gpi
+ 
+         // serialize
+           std::stringstream sstr;
+-          boost::archive::binary_oarchive oa (sstr);
++          boost::archive::text_oarchive oa (sstr);
+           oa & rqst;
+           std::string const data (sstr.str());
+ 
+diff --git a/src/gpi-space/pc/container/manager.cpp b/src/gpi-space/pc/container/manager.cpp
+index e056535..f925bd3 100644
+--- a/src/gpi-space/pc/container/manager.cpp
++++ b/src/gpi-space/pc/container/manager.cpp
+@@ -16,7 +16,7 @@
+ 
+ #include <gpi-space/pc/container/manager.hpp>
+ 
+-#include <boost/archive/binary_iarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
+ #include <boost/archive/text_oarchive.hpp>
+ #include <boost/filesystem.hpp>
+ #include <boost/format.hpp>
+@@ -436,7 +436,7 @@ namespace gpi
+                       {
+                         std::stringstream sstr
+                           (std::string (buffer.data(), buffer.size()));
+-                        boost::archive::binary_iarchive ia (sstr);
++                        boost::archive::text_iarchive ia (sstr);
+                         ia & request;
+                       }
+                     , "could not decode message"
+diff --git a/src/rpc/detail/remote_stream_endpoint.hpp b/src/rpc/detail/remote_stream_endpoint.hpp
+index 1c3a7df..7848590 100644
+--- a/src/rpc/detail/remote_stream_endpoint.hpp
++++ b/src/rpc/detail/remote_stream_endpoint.hpp
+@@ -22,7 +22,7 @@
+ 
+ #include <util-generic/serialization/exception.hpp>
+ 
+-#include <boost/archive/binary_iarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
+ #include <boost/asio/io_service.hpp>
+ #include <boost/asio/spawn.hpp>
+ #include <boost/thread/shared_mutex.hpp>
+@@ -83,7 +83,7 @@ namespace fhg
+         //! allowed to be blocking.
+         virtual void send_and_receive
+           ( std::vector<char> buffer
+-          , std::function<void (boost::archive::binary_iarchive&)> set_value
++          , std::function<void (boost::archive::text_iarchive&)> set_value
+           , std::function<void (std::exception_ptr)> set_exception
+           ) override;
+         virtual boost::asio::io_service& io_service() override
+@@ -108,7 +108,7 @@ namespace fhg
+         boost::upgrade_mutex _guard_socket;
+         std::mutex _guard_set_exception_and_value;
+         std::unordered_map < uint64_t
+-                           , std::function<void (boost::archive::binary_iarchive&)>
++                           , std::function<void (boost::archive::text_iarchive&)>
+                            > _set_value;
+         std::unordered_map < uint64_t
+                            , std::function<void (std::exception_ptr)>
+diff --git a/src/rpc/detail/remote_stream_endpoint.ipp b/src/rpc/detail/remote_stream_endpoint.ipp
+index 5606a1f..ac8317d 100644
+--- a/src/rpc/detail/remote_stream_endpoint.ipp
++++ b/src/rpc/detail/remote_stream_endpoint.ipp
+@@ -209,7 +209,7 @@ namespace fhg
+       template<typename Protocol, typename Traits>
+         void remote_stream_endpoint<Protocol, Traits>::send_and_receive
+           ( std::vector<char> buffer
+-          , std::function<void (boost::archive::binary_iarchive&)> set_value
++          , std::function<void (boost::archive::text_iarchive&)> set_value
+           , std::function<void (std::exception_ptr)> set_exception
+           )
+       {
+@@ -333,8 +333,8 @@ namespace fhg
+ 
+             boost::iostreams::array_source source
+               (response.data(), response.size());
+-            boost::iostreams::stream_buffer<decltype (source)> stream (source);
+-            boost::archive::binary_iarchive archive (stream);
++            boost::iostreams::stream<decltype (source)> stream (source);
++            boost::archive::text_iarchive archive (stream);
+ 
+             // Callback without yield passed down! Fine: only given by
+             // `remote_function` which passes a Promise's `set_value`,
+diff --git a/src/rpc/detail/service_stream_provider.hpp b/src/rpc/detail/service_stream_provider.hpp
+index 30ba19e..e7c1b4b 100644
+--- a/src/rpc/detail/service_stream_provider.hpp
++++ b/src/rpc/detail/service_stream_provider.hpp
+@@ -19,8 +19,8 @@
+ #include <rpc/common.hpp>
+ #include <rpc/detail/async_task_termination_guard.hpp>
+ 
+-#include <boost/archive/binary_iarchive.hpp>
+-#include <boost/archive/binary_oarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
++#include <boost/archive/text_oarchive.hpp>
+ #include <boost/asio/io_service.hpp>
+ #include <boost/asio/spawn.hpp>
+ 
+@@ -54,8 +54,8 @@ namespace fhg
+         service_stream_provider_with_deferred_start
+           ( boost::asio::io_service&
+           , std::function< void ( boost::asio::yield_context
+-                                , boost::archive::binary_iarchive&
+-                                , boost::archive::binary_oarchive&
++                                , boost::archive::text_iarchive&
++                                , boost::archive::text_oarchive&
+                                 )
+                          > dispatch
+           , typename Protocol::endpoint = {}
+@@ -77,8 +77,8 @@ namespace fhg
+         async_task_termination_guard _async_task_termination_guard_sockets;
+ 
+         std::function< void ( boost::asio::yield_context
+-                            , boost::archive::binary_iarchive&
+-                            , boost::archive::binary_oarchive&
++                            , boost::archive::text_iarchive&
++                            , boost::archive::text_oarchive&
+                             )
+                      > _dispatch;
+         std::mutex _socket_guard;
+@@ -109,8 +109,8 @@ namespace fhg
+         service_stream_provider
+           ( boost::asio::io_service&
+           , std::function< void ( boost::asio::yield_context
+-                                , boost::archive::binary_iarchive&
+-                                , boost::archive::binary_oarchive&
++                                , boost::archive::text_iarchive&
++                                , boost::archive::text_oarchive&
+                                 )
+                          > dispatch
+           , typename Protocol::endpoint = {}
+diff --git a/src/rpc/detail/service_stream_provider.ipp b/src/rpc/detail/service_stream_provider.ipp
+index 3e4e911..a4edde7 100644
+--- a/src/rpc/detail/service_stream_provider.ipp
++++ b/src/rpc/detail/service_stream_provider.ipp
+@@ -45,8 +45,8 @@ namespace fhg
+         : service_stream_provider_with_deferred_start
+             ( io_service
+             , [&dispatcher] ( boost::asio::yield_context yield
+-                            , boost::archive::binary_iarchive& input
+-                            , boost::archive::binary_oarchive& output
++                            , boost::archive::text_iarchive& input
++                            , boost::archive::text_oarchive& output
+                             )
+               {
+                 dispatcher.dispatch (yield, input, output);
+@@ -60,8 +60,8 @@ namespace fhg
+         ::service_stream_provider_with_deferred_start
+           ( boost::asio::io_service& io_service
+           , std::function< void ( boost::asio::yield_context
+-                                , boost::archive::binary_iarchive&
+-                                , boost::archive::binary_oarchive&
++                                , boost::archive::text_iarchive&
++                                , boost::archive::text_oarchive&
+                                 )
+                          > dispatch
+           , typename Protocol::endpoint endpoint
+@@ -307,12 +307,12 @@ namespace fhg
+ 
+             {
+               boost::iostreams::array_source source (request.data(), request.size());
+-              boost::iostreams::stream_buffer<decltype (source)> input_stream (source);
+-              boost::archive::binary_iarchive input (input_stream);
++              boost::iostreams::stream<decltype (source)> input_stream (source);
++              boost::archive::text_iarchive input (input_stream);
+ 
+               util::vector_sink sink (response);
+               boost::iostreams::stream<decltype (sink)> output_stream (sink);
+-              boost::archive::binary_oarchive output (output_stream);
++              boost::archive::text_oarchive output (output_stream);
+ 
+               // Dangerous: yield is passed down but service_handler
+               // allows for not_yielding callbacks. This might be
+@@ -355,8 +355,8 @@ namespace fhg
+         : service_stream_provider<Protocol, Traits>
+             ( io_service
+             , [&dispatcher] ( boost::asio::yield_context yield
+-                            , boost::archive::binary_iarchive& input
+-                            , boost::archive::binary_oarchive& output
++                            , boost::archive::text_iarchive& input
++                            , boost::archive::text_oarchive& output
+                             )
+               {
+                 dispatcher.dispatch (yield, input, output);
+@@ -369,8 +369,8 @@ namespace fhg
+         service_stream_provider<Protocol, Traits>::service_stream_provider
+           ( boost::asio::io_service& io_service
+           , std::function< void ( boost::asio::yield_context
+-                                , boost::archive::binary_iarchive&
+-                                , boost::archive::binary_oarchive&
++                                , boost::archive::text_iarchive&
++                                , boost::archive::text_oarchive&
+                                 )
+                          > dispatch
+           , typename Protocol::endpoint endpoint
+@@ -388,8 +388,8 @@ namespace fhg
+         : service_stream_provider<Protocol, Traits>
+              ( io_service
+              , [this] ( boost::asio::yield_context yield
+-                      , boost::archive::binary_iarchive& input
+-                      , boost::archive::binary_oarchive& output
++                      , boost::archive::text_iarchive& input
++                      , boost::archive::text_oarchive& output
+                       )
+                {
+                  std::unique_lock<std::mutex> lock (_guard);
+diff --git a/src/rpc/remote_endpoint.hpp b/src/rpc/remote_endpoint.hpp
+index 3937016..bf7db56 100644
+--- a/src/rpc/remote_endpoint.hpp
++++ b/src/rpc/remote_endpoint.hpp
+@@ -20,7 +20,7 @@
+ 
+ #include <util-generic/serialization/exception.hpp>
+ 
+-#include <boost/archive/binary_iarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
+ #include <boost/asio/io_service.hpp>
+ 
+ #include <exception>
+@@ -43,7 +43,7 @@ namespace fhg
+ 
+       virtual void send_and_receive
+         ( std::vector<char> buffer
+-        , std::function<void (boost::archive::binary_iarchive&)> set_value
++        , std::function<void (boost::archive::text_iarchive&)> set_value
+         , std::function<void (std::exception_ptr)> set_exception
+         ) = 0;
+       virtual boost::asio::io_service& io_service() = 0;
+diff --git a/src/rpc/remote_function.ipp b/src/rpc/remote_function.ipp
+index f35e341..8c432c9 100644
+--- a/src/rpc/remote_function.ipp
++++ b/src/rpc/remote_function.ipp
+@@ -17,8 +17,8 @@
+ #include <util-generic/callable_signature.hpp>
+ #include <util-generic/serialization/std/tuple.hpp>
+ 
+-#include <boost/archive/binary_iarchive.hpp>
+-#include <boost/archive/binary_oarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
++#include <boost/archive/text_oarchive.hpp>
+ #include <boost/iostreams/stream.hpp>
+ #include <boost/serialization/vector.hpp>
+ 
+@@ -34,7 +34,7 @@ namespace fhg
+     {
+       template<typename Promise>
+         inline void operator()
+-          (Promise& promise, boost::archive::binary_iarchive& archive)
++          (Promise& promise, boost::archive::text_iarchive& archive)
+       {
+         T value;
+         archive >> value;
+@@ -46,7 +46,7 @@ namespace fhg
+     {
+       template<typename Promise>
+         inline void operator()
+-          (Promise& promise, boost::archive::binary_iarchive&)
++          (Promise& promise, boost::archive::text_iarchive&)
+       {
+         promise.set_value();
+       }
+@@ -135,7 +135,7 @@ namespace fhg
+       {
+         util::vector_sink sink (request);
+         boost::iostreams::stream<decltype (sink)> stream (sink);
+-        boost::archive::binary_oarchive archive (stream);
++        boost::archive::text_oarchive archive (stream);
+         archive << std::string (typeid (Description).name());
+         archive << arguments_tuple_of_t < typename Description::signature
+                                         , Args...
+@@ -154,7 +154,7 @@ namespace fhg
+       auto* endpoint (&_endpoint);
+       _endpoint.send_and_receive
+         ( std::move (request)
+-        , [promise, endpoint] (boost::archive::binary_iarchive& archive)
++        , [promise, endpoint] (boost::archive::text_iarchive& archive)
+           {
+             bool is_exception;
+             archive >> is_exception;
+diff --git a/src/rpc/service_dispatcher.cpp b/src/rpc/service_dispatcher.cpp
+index 7abd2e0..ad9fe1a 100644
+--- a/src/rpc/service_dispatcher.cpp
++++ b/src/rpc/service_dispatcher.cpp
+@@ -33,8 +33,8 @@ namespace fhg
+     {}
+ 
+     void service_dispatcher::dispatch ( boost::asio::yield_context yield
+-                                      , boost::archive::binary_iarchive& input
+-                                      , boost::archive::binary_oarchive& output
++                                      , boost::archive::text_iarchive& input
++                                      , boost::archive::text_oarchive& output
+                                       ) const
+     {
+       std::string function;
+diff --git a/src/rpc/service_dispatcher.hpp b/src/rpc/service_dispatcher.hpp
+index 033dc43..4983bef 100644
+--- a/src/rpc/service_dispatcher.hpp
++++ b/src/rpc/service_dispatcher.hpp
+@@ -18,8 +18,8 @@
+ 
+ #include <util-generic/serialization/exception.hpp>
+ 
+-#include <boost/archive/binary_iarchive.hpp>
+-#include <boost/archive/binary_oarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
++#include <boost/archive/text_oarchive.hpp>
+ #include <boost/asio/spawn.hpp>
+ 
+ #include <functional>
+@@ -39,8 +39,8 @@ namespace fhg
+                          );
+ 
+       void dispatch ( boost::asio::yield_context
+-                    , boost::archive::binary_iarchive&
+-                    , boost::archive::binary_oarchive&
++                    , boost::archive::text_iarchive&
++                    , boost::archive::text_oarchive&
+                     ) const;
+ 
+       service_dispatcher (service_dispatcher const&) = delete;
+@@ -54,8 +54,8 @@ namespace fhg
+       std::unordered_map
+         < std::string
+         , std::function< void ( boost::asio::yield_context
+-                              , boost::archive::binary_iarchive&
+-                              , boost::archive::binary_oarchive&
++                              , boost::archive::text_iarchive&
++                              , boost::archive::text_oarchive&
+                               )
+                        >
+         > _handlers;
+diff --git a/src/rpc/service_handler.ipp b/src/rpc/service_handler.ipp
+index 1281bca..ec4c9ba 100644
+--- a/src/rpc/service_handler.ipp
++++ b/src/rpc/service_handler.ipp
+@@ -18,8 +18,8 @@
+ #include <util-generic/cxx17/apply.hpp>
+ #include <util-generic/serialization/std/tuple.hpp>
+ 
+-#include <boost/archive/binary_iarchive.hpp>
+-#include <boost/archive/binary_oarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
++#include <boost/archive/text_oarchive.hpp>
+ 
+ namespace fhg
+ {
+@@ -34,8 +34,8 @@ namespace fhg
+             ( manager._handlers
+             , typeid (Description).name()
+             , [handler] ( boost::asio::yield_context yield
+-                        , boost::archive::binary_iarchive& input
+-                        , boost::archive::binary_oarchive& output
++                        , boost::archive::text_iarchive& input
++                        , boost::archive::text_oarchive& output
+                         )
+               {
+                 service_handler_thunk<typename Description::signature>{}
+@@ -45,7 +45,7 @@ namespace fhg
+     {}
+ 
+     template<typename... Args>
+-      std::tuple<Args...> arguments ( boost::archive::binary_iarchive& input
++      std::tuple<Args...> arguments ( boost::archive::text_iarchive& input
+                                     , boost::asio::yield_context
+                                     , decltype (not_yielding)
+                                     )
+@@ -56,7 +56,7 @@ namespace fhg
+     }
+     template<typename... Args>
+       std::tuple<boost::asio::yield_context, Args...>
+-        arguments ( boost::archive::binary_iarchive& input
++        arguments ( boost::archive::text_iarchive& input
+                   , boost::asio::yield_context yield
+                   , decltype (yielding)
+                   )
+@@ -75,8 +75,8 @@ namespace fhg
+       template<typename Func, typename Yielding>
+         void operator() ( boost::asio::yield_context yield
+                         , Func&& fun
+-                        , boost::archive::binary_iarchive& input
+-                        , boost::archive::binary_oarchive& output
++                        , boost::archive::text_iarchive& input
++                        , boost::archive::text_oarchive& output
+                         , Yielding
+                         )
+       {
+@@ -95,8 +95,8 @@ namespace fhg
+       template<typename Func, typename Yielding>
+         void operator() ( boost::asio::yield_context yield
+                         , Func&& fun
+-                        , boost::archive::binary_iarchive& input
+-                        , boost::archive::binary_oarchive& output
++                        , boost::archive::text_iarchive& input
++                        , boost::archive::text_oarchive& output
+                         , Yielding
+                         )
+       {
+diff --git a/src/util-generic/serialization/exception.cpp b/src/util-generic/serialization/exception.cpp
+index c1c8a9e..8b0d706 100644
+--- a/src/util-generic/serialization/exception.cpp
++++ b/src/util-generic/serialization/exception.cpp
+@@ -639,12 +639,12 @@ namespace fhg
+           )
+         {
+           std::ostringstream os;
+-          boost::archive::binary_oarchive oa (os);
++          boost::archive::text_oarchive oa (os);
+           serialize (oa, exception, functions);
+           return os.str();
+         }
+         void serialize
+-          ( boost::archive::binary_oarchive& archive
++          ( boost::archive::text_oarchive& archive
+           , std::exception_ptr exception
+           , serialization_functions const& functions
+           )
+@@ -660,11 +660,11 @@ namespace fhg
+           )
+         {
+           std::istringstream is (blob);
+-          boost::archive::binary_iarchive ia (is);
++          boost::archive::text_iarchive ia (is);
+           return deserialize (ia, functions);
+         }
+         std::exception_ptr deserialize
+-          ( boost::archive::binary_iarchive& archive
++          ( boost::archive::text_iarchive& archive
+           , serialization_functions const& functions
+           )
+         {
+diff --git a/src/util-generic/serialization/exception.hpp b/src/util-generic/serialization/exception.hpp
+index d22d349..64ba912 100644
+--- a/src/util-generic/serialization/exception.hpp
++++ b/src/util-generic/serialization/exception.hpp
+@@ -16,8 +16,8 @@
+ 
+ #pragma once
+ 
+-#include <boost/archive/binary_iarchive.hpp>
+-#include <boost/archive/binary_oarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
++#include <boost/archive/text_oarchive.hpp>
+ #include <boost/optional.hpp>
+ 
+ #include <exception>
+@@ -58,7 +58,7 @@ namespace fhg
+           , serialization_functions const& = serialization_functions()
+           );
+         void serialize
+-          ( boost::archive::binary_oarchive&
++          ( boost::archive::text_oarchive&
+           , std::exception_ptr
+           , serialization_functions const& = serialization_functions()
+           );
+@@ -68,7 +68,7 @@ namespace fhg
+           , serialization_functions const& = serialization_functions()
+           );
+         std::exception_ptr deserialize
+-          ( boost::archive::binary_iarchive&
++          ( boost::archive::text_iarchive&
+           , serialization_functions const& = serialization_functions()
+           );
+ 
+diff --git a/src/util-generic/serialization/exception.ipp b/src/util-generic/serialization/exception.ipp
+index 993d97f..2057aa7 100644
+--- a/src/util-generic/serialization/exception.ipp
++++ b/src/util-generic/serialization/exception.ipp
+@@ -37,8 +37,8 @@ namespace fhg
+             struct serializer
+               < Exception
+               , cxx17::void_t
+-                  < decltype (std::declval<boost::archive::binary_oarchive>() << std::declval<Exception const&>())
+-                  , decltype (std::declval<boost::archive::binary_iarchive>() >> std::declval<Exception&>())
++                  < decltype (std::declval<boost::archive::text_oarchive>() << std::declval<Exception const&>())
++                  , decltype (std::declval<boost::archive::text_iarchive>() >> std::declval<Exception&>())
+                   , decltype (std::declval<Exception&>() = std::declval<Exception>())
+                   , decltype (Exception{})
+                   >
+@@ -53,7 +53,7 @@ namespace fhg
+               catch (Exception const& ex)
+               {
+                 std::ostringstream oss;
+-                boost::archive::binary_oarchive oa (oss);
++                boost::archive::text_oarchive oa (oss);
+                 oa << ex;
+                 return oss.str();
+               }
+@@ -65,7 +65,7 @@ namespace fhg
+             static Exception from_string (std::string const& serialized)
+             {
+               std::istringstream iss (serialized);
+-              boost::archive::binary_iarchive ia (iss);
++              boost::archive::text_iarchive ia (iss);
+               Exception ex;
+               ia >> ex;
+               return ex;
+@@ -86,8 +86,8 @@ namespace fhg
+             struct serializer
+               < Exception
+               , cxx17::void_t
+-                  < decltype (std::declval<Exception const&>().serialize (std::declval<boost::archive::binary_oarchive&>()))
+-                  , decltype (std::declval<Exception&>() = Exception::deserialize (std::declval<boost::archive::binary_iarchive&>()))
++                  < decltype (std::declval<Exception const&>().serialize (std::declval<boost::archive::text_oarchive&>()))
++                  , decltype (std::declval<Exception&>() = Exception::deserialize (std::declval<boost::archive::text_iarchive&>()))
+                   >
+               >
+           {
+@@ -100,7 +100,7 @@ namespace fhg
+               catch (Exception const& ex)
+               {
+                 std::ostringstream oss;
+-                boost::archive::binary_oarchive oa (oss);
++                boost::archive::text_oarchive oa (oss);
+                 ex.serialize (oa);
+                 return oss.str();
+               }
+@@ -112,7 +112,7 @@ namespace fhg
+             static Exception from_string (std::string const& serialized)
+             {
+               std::istringstream iss (serialized);
+-              boost::archive::binary_iarchive ia (iss);
++              boost::archive::text_iarchive ia (iss);
+               return Exception::deserialize (ia);
+             }
+ 
+diff --git a/src/util-generic/test/serialization/by_member.cpp b/src/util-generic/test/serialization/by_member.cpp
+index cbcfa9a..8bd3260 100644
+--- a/src/util-generic/test/serialization/by_member.cpp
++++ b/src/util-generic/test/serialization/by_member.cpp
+@@ -16,8 +16,8 @@
+ 
+ #include <util-generic/serialization/by_member.hpp>
+ 
+-#include <boost/archive/binary_iarchive.hpp>
+-#include <boost/archive/binary_oarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
++#include <boost/archive/text_oarchive.hpp>
+ #include <boost/test/unit_test.hpp>
+ 
+ #include <sstream>
+@@ -88,12 +88,12 @@ namespace fhg
+         current_index = 0;
+ 
+         std::stringstream ss;
+-        boost::archive::binary_oarchive oa {ss};
++        boost::archive::text_oarchive oa {ss};
+ 
+         order_checker const original{};
+         oa << original;
+ 
+-        boost::archive::binary_iarchive ia {ss};
++        boost::archive::text_iarchive ia {ss};
+         order_checker deserialized;
+         ia >> deserialized;
+ 
+diff --git a/src/util-generic/test/serialization/std/error_code.cpp b/src/util-generic/test/serialization/std/error_code.cpp
+index 7fdf9f1..a350335 100644
+--- a/src/util-generic/test/serialization/std/error_code.cpp
++++ b/src/util-generic/test/serialization/std/error_code.cpp
+@@ -60,9 +60,9 @@ BOOST_AUTO_TEST_CASE (cant_handle_custom_error_categories)
+   std::error_code const ec (0, custom_error_category);
+ 
+   std::stringstream ss;
+-  boost::archive::binary_oarchive oa {ss};
++  boost::archive::text_oarchive oa {ss};
+   oa << ec;
+-  boost::archive::binary_iarchive ia {ss};
++  boost::archive::text_iarchive ia {ss};
+   std::error_code deserialized;
+ 
+   fhg::util::testing::require_exception
+diff --git a/src/util-generic/test/serialization/trivial.cpp b/src/util-generic/test/serialization/trivial.cpp
+index c6fa6e4..802b4d8 100644
+--- a/src/util-generic/test/serialization/trivial.cpp
++++ b/src/util-generic/test/serialization/trivial.cpp
+@@ -19,8 +19,8 @@
+ #include <util-generic/testing/require_compiletime.hpp>
+ #include <util-generic/testing/require_serialized_to_id.hpp>
+ 
+-#include <boost/archive/binary_iarchive.hpp>
+-#include <boost/archive/binary_oarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
++#include <boost/archive/text_oarchive.hpp>
+ #include <boost/test/unit_test.hpp>
+ 
+ #include <iostream>
+@@ -165,7 +165,7 @@ namespace fhg
+           non_trivial_user_defined_struct x (0);
+           trivial_user_defined_struct y (0);
+ 
+-          boost::archive::binary_oarchive oa (ss);
++          boost::archive::text_oarchive oa (ss);
+           oa & x;
+           oa & y;
+ 
+@@ -177,7 +177,7 @@ namespace fhg
+           non_trivial_user_defined_struct x (-1);
+           trivial_user_defined_struct y (-1);
+ 
+-          boost::archive::binary_iarchive ia (ss);
++          boost::archive::text_iarchive ia (ss);
+           ia & x;
+           ia & y;
+ 
+diff --git a/src/util-generic/testing/require_serialized_to_id.ipp b/src/util-generic/testing/require_serialized_to_id.ipp
+index 5676f8b..ab11b00 100644
+--- a/src/util-generic/testing/require_serialized_to_id.ipp
++++ b/src/util-generic/testing/require_serialized_to_id.ipp
+@@ -17,8 +17,8 @@
+ #include <util-generic/cxx14/make_unique.hpp>
+ #include <util-generic/testing/printer/generic.hpp>
+ 
+-#include <boost/archive/binary_iarchive.hpp>
+-#include <boost/archive/binary_oarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
++#include <boost/archive/text_oarchive.hpp>
+ #include <boost/archive/text_iarchive.hpp>
+ #include <boost/archive/text_oarchive.hpp>
+ #include <boost/serialization/unique_ptr.hpp>
+diff --git a/src/util-qt/qbytearray_archive.hpp b/src/util-qt/qbytearray_archive.hpp
+index 1c03d77..9c0373a 100644
+--- a/src/util-qt/qbytearray_archive.hpp
++++ b/src/util-qt/qbytearray_archive.hpp
+@@ -20,8 +20,8 @@
+ 
+ #include <QtCore/QByteArray>
+ 
+-#include <boost/archive/binary_iarchive.hpp>
+-#include <boost/archive/binary_oarchive.hpp>
++#include <boost/archive/text_iarchive.hpp>
++#include <boost/archive/text_oarchive.hpp>
+ 
+ #include <sstream>
+ #include <stdexcept>
+@@ -39,7 +39,7 @@ namespace fhg
+       {
+       private:
+         std::ostringstream _stream;
+-        boost::archive::binary_oarchive _underlying = {_stream};
++        boost::archive::text_oarchive _underlying = {_stream};
+ 
+       public:
+         QByteArray get() const
+@@ -82,7 +82,7 @@ namespace fhg
+       {
+       private:
+         std::istringstream _stream;
+-        boost::archive::binary_iarchive _underlying = {_stream};
++        boost::archive::text_iarchive _underlying = {_stream};
+ 
+       public:
+         qbytearray_iarchive (QByteArray const& ba)

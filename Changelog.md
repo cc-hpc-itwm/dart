@@ -1,3 +1,9 @@
+# 2021-02-11
+## Added
+   - Patch for gpispace to make communication portable
+## Changed
+   - armhf patch improved
+   - better error capturing
 # 2021-02-03
 ## Added
    - Experimental Dockerfile for building an armhf image

@@ -3,6 +3,7 @@
 #include "dart-server/gspc_interface.hpp"
 #include "dart-server/job_storages/ram_storage.hpp"
 
+#include <boost/exception/diagnostic_information.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <thread>
 #include <regex>
@@ -327,9 +328,15 @@ void dart_server::post_job(http::client* client, const rest::message& message, c
   {
     _storage->add_job(name, config);
   }
-  catch (std::runtime_error & exc)
+  catch (std::exception & exc)
   {
     client->send_message(internal_error(http::status_code::InternalServerError_500, 0, exc.what(), ""));
+    return;
+  }
+  catch (boost::exception & exc)
+  {
+    client->send_message(internal_error(http::status_code::InternalServerError_500, 0, boost::diagnostic_information(exc), ""));
+    return;
   }
 
   boost::property_tree::ptree content;
@@ -683,9 +690,14 @@ void dart_server::add_worker(http::client* client, const rest::message& message,
     log_message::info("[dart_server::add_worker] " + msg);
     _gspc->add_workers(hosts, workers_per_host, capabilities, shm_size);
   }
-  catch (std::runtime_error & exception)
+  catch (std::exception & exc)
   {
-    client->send_message(internal_error(http::status_code::InternalServerError_500, 0, exception.what(), ""));
+    client->send_message(internal_error(http::status_code::InternalServerError_500, 0, exc.what(), ""));
+    return;
+  }
+  catch (boost::exception & exc)
+  {
+    client->send_message(internal_error(http::status_code::InternalServerError_500, 0, boost::diagnostic_information(exc), ""));
     return;
   }
 
@@ -726,9 +738,14 @@ void dart_server::delete_worker(http::client* client, const rest::message& messa
     log_message::info("[dart_server::delete_worker] " + msg);
     _gspc->remove_workers(hosts);
   }
-  catch (std::runtime_error & exception)
+  catch (std::exception & exc)
   {
-    client->send_message(internal_error(http::status_code::InternalServerError_500, 0, exception.what(), ""));
+    client->send_message(internal_error(http::status_code::InternalServerError_500, 0, exc.what(), ""));
+    return;
+  }
+  catch (boost::exception & exc)
+  {
+    client->send_message(internal_error(http::status_code::InternalServerError_500, 0, boost::diagnostic_information(exc), ""));
     return;
   }
 
