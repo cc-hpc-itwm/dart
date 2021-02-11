@@ -21,7 +21,7 @@ python -m pip install . --no-deps --ignore-installed -vv
 
 Requirements:
 
-GPI-Space v20.09.1 (https://github.com/cc-hpc-itwm/gpispace.git)
+GPI-Space v20.12 (https://github.com/cc-hpc-itwm/gpispace.git)
 anaconda3
 boost 1.6+
 cmake 3.*+

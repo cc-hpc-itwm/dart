@@ -87,13 +87,14 @@
           <cinclude href="boost/asio/ip/host_name.hpp"/>
           <cinclude href="boost/filesystem.hpp"/>
           <cinclude href="chrono"/>
-          <code><![CDATA[                        
+          <code><![CDATA[
+                                    
             auto worker (dart::get_public_worker_name
                             (*(_pnetc_context->workers().begin()))
                          );
                       
              std::string host (boost::asio::ip::host_name());
-              
+            try {  
              auto start = std::chrono::high_resolution_clock::now();
             
              auto unix_timestamp = std::chrono::seconds (std::time(NULL));
@@ -197,7 +198,34 @@
                    , py_res.second
                    );         
                }
-             }     
+             }
+            }
+            catch(std::exception& err)
+            {
+                task_result = pnetc::type::task_result::task_result
+                  ( location_and_parameters.task_id
+                  , location_and_parameters.location
+                  , host
+                  , worker
+                  , std::to_string (0)
+                  , 0.f
+                  , err.what()
+                  , we::type::bytearray()
+                  );
+             }
+             catch(...)
+             {
+                task_result = pnetc::type::task_result::task_result
+                  ( location_and_parameters.task_id
+                  , location_and_parameters.location
+                  , host
+                  , worker
+                  , "0"
+                  , 0.f
+                  , "unknown error occured"
+                  ,  we::type::bytearray()
+                  );
+            }    
             ]]>
           </code>
         </module>
