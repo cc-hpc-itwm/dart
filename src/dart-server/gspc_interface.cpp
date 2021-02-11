@@ -325,8 +325,8 @@ std::vector<result> gspc_interface::fetch_available_results()
 
           results.push_back(result{
               iter->first,
-              task_result.worker,
               task_result.host,
+              task_result.worker,
               task_result.location,
               task_result.start_time,
               task_result.duration,

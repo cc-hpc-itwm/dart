@@ -4,6 +4,8 @@
 ## Changed
    - armhf patch improved
    - better error capturing
+## Fixes
+   - worker/host fields were mixed up
 # 2021-02-03
 ## Added
    - Experimental Dockerfile for building an armhf image
