@@ -74,10 +74,10 @@ namespace
 
     if (config.get("gspc.ssh_port", "") != "")
     {
-      std::string ssh_username("--ssh-port=" + config.get("gspc.ssh_port", ""));
+      std::string ssh_port("--ssh-port=" + config.get("gspc.ssh_port", ""));
 
       arr_opt.push_back("--rif-strategy-parameters");
-      arr_opt.push_back(ssh_username);
+      arr_opt.push_back(ssh_port);
     }
 
     boost::program_options::store
@@ -89,6 +89,42 @@ namespace
     gspc::set_application_search_path(vm, install.libraries());
 
     return vm;
+  }
+
+  void replace_substr(std::string& base, const std::string& substr, const std::string& replacement)
+  {
+    std::size_t index = 0;
+    while ((index = base.find(substr, index)) != std::string::npos)
+    {
+      base.replace(index, substr.size(), replacement);
+      index += replacement.size();
+    }
+  }
+
+  std::string build_dartname(const std::string& string)
+  {
+    auto base = string;
+    replace_substr(base, ":", ":0");
+    replace_substr(base, "+", ":1");
+    replace_substr(base, "#", ":2");
+    replace_substr(base, ".", ":3");
+    replace_substr(base, "-", ":4");
+    return ":dartname::" + base + "::";
+  }
+
+  boost::optional<std::string> get_dartname(const std::string& string)
+  {
+    if ((string.substr(0, 11) == ":dartname::") && (string.substr(string.size() - 2) == "::"))
+    {
+      auto name = string.substr(11, string.size() - 13);
+      replace_substr(name, ":4", "-");
+      replace_substr(name, ":3", ".");
+      replace_substr(name, ":2", "#");
+      replace_substr(name, ":1", "+");
+      replace_substr(name, ":0", ":");
+      return name;
+    }
+    return boost::none;
   }
 }
 
@@ -142,7 +178,7 @@ gspc_interface::~gspc_interface()
   _master_rifd.reset();
 }
 
-void gspc_interface::add_workers(const std::vector<std::string>& hosts, unsigned workers_per_host,
+void gspc_interface::add_workers(const std::string& name, const std::vector<std::string>& hosts, unsigned workers_per_host,
   const std::vector<std::string>& capabilities, unsigned shm_size)
 {
   log_message::info("[gspc_interface::add_workers] starting rifd");
@@ -183,9 +219,13 @@ void gspc_interface::add_workers(const std::vector<std::string>& hosts, unsigned
     }
   }
 
+  auto cpbs = capabilities;
+  if (name != "")
+    cpbs.emplace_back(build_dartname(name));
+
   const gspc::worker_description description
   {
-      capabilities
+      cpbs
     , workers_per_host
     , 0
     , shm_size
@@ -196,8 +236,6 @@ void gspc_interface::add_workers(const std::vector<std::string>& hosts, unsigned
   // Adding the worker
   log_message::info("[gspc_interface::add_workers] adding workers");
   _drts->add_worker({ description }, entry_points, _certificates);
-
-  // TODO: Add tokens on workflow for each worker to report back!
 
   // and finally tear down the rifds.
   log_message::info("[gspc_interface::add_workers] teardown rifds");
@@ -278,16 +316,45 @@ void gspc_interface::remove_workers(const std::vector<std::string>& hosts)
     message += ")";
   }
   log_message::info(message);
-  // Marking workers as unavailable
 
   // and finally removing the rifds
   log_message::info("[gspc_interface::remove_workers] teardown rifds");
   rifds.teardown();
 }
 
-boost::optional<void*> gspc_interface::fetch_available_worker_info()
+std::unordered_map<std::string, worker> gspc_interface::fetch_available_workers()
 {
-  return boost::none;
+  std::unordered_map<std::string, worker> workers;
+  std::unordered_map<std::string, std::vector<gspc::capability>> gspcname_capability;
+  gspc::client client(*_drts, _certificates);
+
+  auto cpbs = client.get_capabilities();
+  for (auto& cpb : cpbs)
+  {
+    gspcname_capability[cpb.owner].push_back(cpb);
+  }
+
+  for (auto& pair : gspcname_capability)
+  {
+    std::string drts_name = "";
+    std::vector<std::string> capabilities;
+    capabilities.reserve(std::max(static_cast<std::size_t>(1), pair.second.size()) - 1);
+    for (auto& capability : pair.second)
+    {
+      auto name = get_dartname(capability.name);
+      if (name)
+      {
+        drts_name = name.get();
+        continue;
+      }
+      capabilities.emplace_back(capability.name);
+    }
+    auto& w = workers[drts_name];
+    w.count += 1;
+    w.capabilities.insert(w.capabilities.end(), capabilities.begin(), capabilities.end());
+  }
+
+  return workers;
 }
 
 std::vector<result> gspc_interface::fetch_available_results()
@@ -323,16 +390,17 @@ std::vector<result> gspc_interface::fetch_available_results()
         {
           auto task_result = pnetc::type::task_result::from_value(it->second);
 
-          results.push_back(result{
-              iter->first,
-              task_result.host,
-              task_result.worker,
-              task_result.location,
-              task_result.start_time,
-              task_result.duration,
-              task_result.error,
-              task_result.success.to_string()
-            });
+          result r;
+          r.job = iter->first;
+          r.host = task_result.host;
+          r.worker = task_result.worker;
+          r.location = task_result.location;
+          r.start_time = task_result.start_time;
+          r.duration = task_result.duration;
+          r.error = task_result.error;
+          r.success = task_result.success.to_string();
+
+          results.push_back(std::move(r));
         }
       }
       catch (std::runtime_error & err2)
@@ -420,7 +488,7 @@ void gspc_interface::start_job(const std::string& job_name, const job_config& co
     location_and_parameters_list.emplace_back(
       pnetc::type::location_and_parameters::to_value(
         pnetc::type::location_and_parameters::location_and_parameters
-        ("", loc_para.first, loc_para.second)));
+        ("", build_dartname(loc_para.first), loc_para.second)));
   }
 
   log_message::info("[gspc_interface::start_job] created list");

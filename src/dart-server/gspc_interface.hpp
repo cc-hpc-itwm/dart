@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <unordered_map>
+#include <vector>
 
 #include <boost/optional/optional.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -17,17 +18,23 @@
 #include <drts/scoped_rifd.hpp>
 #include <drts/certificates.hpp>
 
+struct worker
+{
+  std::vector<std::string> capabilities;
+  unsigned count = 0;
+};
+
 class gspc_interface final
 {
 public:
   gspc_interface(const installation& install, const boost::property_tree::ptree& config);
   ~gspc_interface();
 
-  void add_workers(const std::vector<std::string>& hosts, unsigned workers_per_host, 
+  void add_workers(const std::string& name, const std::vector<std::string>& hosts, unsigned workers_per_host, 
     const std::vector<std::string>& capabilities, unsigned shm_size);
   void remove_workers(const std::vector<std::string>& hosts);
 
-  boost::optional<void*> fetch_available_worker_info();  // unimplemented
+  std::unordered_map<std::string, worker> fetch_available_workers();
 
   std::vector<result> fetch_available_results();
   boost::optional<result> get_last_result(const std::string& worker);  // unimplemented

@@ -88,7 +88,7 @@
                <![CDATA[
              try
              {
-               dart::load_worker_config(*(_pnetc_context->workers().begin()));
+               dart::load_worker_config(_pnetc_context->worker_name());
               
                auto start = std::chrono::high_resolution_clock::now();
             
@@ -141,7 +141,8 @@
                       && it->path().extension() == ".so"
                       && (it->path().stem().string().find ("libpython") != std::string::npos)
                       )
-                   {  python_library = it->path().string();
+                   {  
+                      python_library = it->path().string();
                       break;
                    }
                  }

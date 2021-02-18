@@ -63,12 +63,14 @@ public:
 
   void add_worker(http::client* client, const rest::message& message, const rest::symbols& symbols);
   void delete_worker(http::client* client, const rest::message& message, const rest::symbols& symbols, const std::vector<rest::message>& peer_responses);
-
+  void get_worker(http::client* client, const rest::message& message, const rest::symbols& symbols, const std::vector<rest::message>& peer_responses);
  
   bool is_authorized(http::client* client, const rest::message& request, authorization_level level);
 
   inline auto& peers() noexcept { return _peers; }
 private:
+  std::string _hostname;
+
   installation _install;
   boost::asio::signal_set _signals;
 

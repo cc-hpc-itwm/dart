@@ -1,5 +1,17 @@
 # 2021-02-11
 ## Added
+   - Patch for gpispace to get capabilities
+   - Added cmd-line argument to specify hostname
+## Changed
+   - Updated Readme
+   - Workername is now required
+   - Renamed some cmd-line parameters
+   - The start_worker script now also expects a name
+## API Changes
+   - add_worker now needs a name
+
+# 2021-02-11
+## Added
    - Patch for gpispace to make communication portable
 ## Changed
    - armhf patch improved

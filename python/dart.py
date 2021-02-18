@@ -57,11 +57,13 @@ class client:
   #
   # @param hosts            list of all the hosts
   # @param workers_per_host the amount of workers to add per host
+  # @param name             the name of the worker
   # @param capabilities     list of the capabilities of the workers
   # @param shm_size         shared memory size
-  def add_workers(self, hosts, workers_per_host, capabilities, shm_size):
+  def add_workers(self, hosts, workers_per_host, name, capabilities, shm_size):
     r = requests.post(self.server + "/worker/", json={
           'key': self.key
+        , 'name': name
         , 'hosts': hosts
         , 'workers_per_host': workers_per_host
         , 'capabilities': capabilities

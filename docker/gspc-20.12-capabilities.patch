@@ -1,0 +1,318 @@
+diff --git a/src/drts/client.cpp b/src/drts/client.cpp
+index 4f16287..c7428d9 100644
+--- a/src/drts/client.cpp
++++ b/src/drts/client.cpp
+@@ -94,6 +94,16 @@ namespace gspc
+   {}
+   PIMPL_DTOR (client)
+ 
++  std::vector<capability> client::get_capabilities()
++  {
++     std::vector<capability> ret;
++     sdpa::capabilities_set_t cpbs = _->_client.discoverCapabilities();
++     ret.reserve(cpbs.size());
++     for(auto cpb : cpbs)
++       ret.emplace_back(capability{cpb.name(), cpb.depth(), cpb.owner()});
++     return ret;
++  }
++
+   job_id_t client::submit
+     ( class workflow const& workflow
+     , std::multimap< std::string
+diff --git a/src/drts/client.hpp b/src/drts/client.hpp
+index 85129bb..d29e5bb 100644
+--- a/src/drts/client.hpp
++++ b/src/drts/client.hpp
+@@ -33,6 +33,12 @@
+ 
+ namespace gspc
+ {
++  struct capability
++  {
++    std::string name;
++    std::size_t depth;
++    std::string owner;
++  };
+   class workflow : boost::noncopyable
+   {
+   public:
+@@ -56,6 +62,8 @@ namespace gspc
+     client (scoped_runtime_system const&, Certificates const& = boost::none);
+     explicit client (information_to_reattach const&, Certificates const& = boost::none);
+ 
++    std::vector<capability> get_capabilities();
++
+     job_id_t submit
+       ( workflow const&
+       , std::multimap< std::string
+diff --git a/src/sdpa/client.cpp b/src/sdpa/client.cpp
+index 85b51d8..f08cc8b 100644
+--- a/src/sdpa/client.cpp
++++ b/src/sdpa/client.cpp
+@@ -16,6 +16,9 @@
+ 
+ #include <sdpa/client.hpp>
+ 
++#include <sdpa/events/DiscoverCapabilitiesEvent.hpp>
++#include <sdpa/events/DiscoverCapabilitiesReplyEvent.hpp>
++
+ #include <sdpa/events/CancelJobAckEvent.hpp>
+ #include <sdpa/events/CancelJobEvent.hpp>
+ #include <sdpa/events/Codec.hpp>
+@@ -49,6 +52,13 @@ namespace sdpa
+ {
+   namespace client
+   {
++
++sdpa::capabilities_set_t Client::discoverCapabilities()
++    {
++      return send_and_wait_for_reply<sdpa::events::DiscoverCapabilitiesReplyEvent>
++        (sdpa::events::DiscoverCapabilitiesEvent ()).capabilities();
++    }
++
+     Client::Client ( fhg::com::host_t const& top_level_agent_host
+                    , fhg::com::port_t const& top_level_agent_port
+                    , std::unique_ptr<boost::asio::io_service> peer_io_service
+diff --git a/src/sdpa/client.hpp b/src/sdpa/client.hpp
+index f3ca701..622426e 100644
+--- a/src/sdpa/client.hpp
++++ b/src/sdpa/client.hpp
+@@ -16,6 +16,8 @@
+ 
+ #pragma once
+ 
++#include <sdpa/capability.hpp>
++
+ #include <sdpa/events/SDPAEvent.hpp>
+ #include <sdpa/types.hpp>
+ 
+@@ -54,6 +56,8 @@ namespace sdpa
+              );
+       ~Client();
+ 
++      sdpa::capabilities_set_t discoverCapabilities();
++
+       job_id_t submitJob(we::type::activity_t);
+       void cancelJob(const job_id_t &);
+       status::code queryJob(const job_id_t &);
+diff --git a/src/sdpa/daemon/Agent.cpp b/src/sdpa/daemon/Agent.cpp
+index 747dca0..a1b2439 100644
+--- a/src/sdpa/daemon/Agent.cpp
++++ b/src/sdpa/daemon/Agent.cpp
+@@ -80,6 +80,21 @@ namespace sdpa
+       }
+     }
+ 
++void Agent::handleDiscoverCapabilitiesEvent( fhg::com::p2p::address_t const& source, const sdpa::events::DiscoverCapabilitiesEvent*)
++{
++
++  std::lock_guard<std::mutex> const guard_capabilites (mtx_cpb_);
++  capabilities_set_t cpbSet;
++
++  _worker_manager.getCapabilities (cpbSet);
++  parent_proxy(this, source).discover_capabilities_reply(cpbSet);
++}
++
++void Agent::parent_proxy::discover_capabilities_reply(sdpa::capabilities_set_t& cpbs) const
++{
++  _that->sendEventToOther<events::DiscoverCapabilitiesReplyEvent>(_address, cpbs);
++}
++
+     Agent::Agent
+         ( const std::string name
+         , const std::string url
+diff --git a/src/sdpa/daemon/Agent.hpp b/src/sdpa/daemon/Agent.hpp
+index bc8371d..64d7a24 100644
+--- a/src/sdpa/daemon/Agent.hpp
++++ b/src/sdpa/daemon/Agent.hpp
+@@ -20,6 +20,10 @@
+ #include <sdpa/com/NetworkStrategy.hpp>
+ #include <sdpa/daemon/NotificationEvent.hpp>
+ #include <sdpa/daemon/scheduler/CoallocationScheduler.hpp>
++
++#include <sdpa/events/DiscoverCapabilitiesEvent.hpp>
++#include <sdpa/events/DiscoverCapabilitiesReplyEvent.hpp>
++
+ #include <sdpa/events/CancelJobAckEvent.hpp>
+ #include <sdpa/events/DeleteJobAckEvent.hpp>
+ #include <sdpa/events/DeleteJobEvent.hpp>
+@@ -140,6 +144,8 @@ namespace sdpa {
+ 
+       // event handlers
+     private:
++      virtual void handleDiscoverCapabilitiesEvent(fhg::com::p2p::address_t const&, sdpa::events::DiscoverCapabilitiesEvent const *) override;
++
+       virtual void handleCancelJobEvent
+         ( fhg::com::p2p::address_t const&
+         , sdpa::events::CancelJobEvent const*
+@@ -417,6 +423,8 @@ namespace sdpa {
+         parent_proxy (Agent*, master_network_info const&);
+         parent_proxy (Agent*, boost::optional<master_info_t::iterator> const&);
+ 
++        void discover_capabilities_reply(capabilities_set_t&) const;
++
+         void worker_registration (capabilities_set_t) const;
+         void notify_shutdown() const;
+ 
+diff --git a/src/sdpa/events/Codec.cpp b/src/sdpa/events/Codec.cpp
+index 52077c9..6bad9e1 100644
+--- a/src/sdpa/events/Codec.cpp
++++ b/src/sdpa/events/Codec.cpp
+@@ -16,6 +16,9 @@
+ 
+ #include <sdpa/events/Codec.hpp>
+ 
++#include <sdpa/events/DiscoverCapabilitiesEvent.hpp>
++#include <sdpa/events/DiscoverCapabilitiesReplyEvent.hpp>
++
+ #include <sdpa/events/BacklogNoLongerFullEvent.hpp>
+ #include <sdpa/events/CancelJobAckEvent.hpp>
+ #include <sdpa/events/CancelJobEvent.hpp>
+@@ -63,6 +66,9 @@ namespace sdpa
+         boost::serialization::void_cast_register<TYPE, BASE>();         \
+         ar.template register_type<TYPE>()
+ 
++        REGISTER (DiscoverCapabilitiesEvent, MgmtEvent);
++        REGISTER (DiscoverCapabilitiesReplyEvent, MgmtEvent);
++
+         REGISTER (DiscoverJobStatesEvent, JobEvent);
+         REGISTER (DiscoverJobStatesReplyEvent, MgmtEvent);
+         REGISTER (CancelJobAckEvent, JobEvent);
+diff --git a/src/sdpa/events/EventHandler.hpp b/src/sdpa/events/EventHandler.hpp
+index c72913b..e15f3d5 100644
+--- a/src/sdpa/events/EventHandler.hpp
++++ b/src/sdpa/events/EventHandler.hpp
+@@ -24,6 +24,9 @@ namespace sdpa
+ {
+   namespace events
+   {
++    class DiscoverCapabilitiesEvent;
++    class DiscoverCapabilitiesReplyEvent;
++
+     class DiscoverJobStatesEvent;
+     class DiscoverJobStatesReplyEvent;
+     class CancelJobAckEvent;
+@@ -56,6 +59,12 @@ namespace sdpa
+     public:
+       virtual ~EventHandler() = default;
+ 
++      virtual void handleDiscoverCapabilitiesEvent(fhg::com::p2p::address_t const&, const DiscoverCapabilitiesEvent*)
++      { throw std::runtime_error ("UNHANDLED EVENT: DiscoverCapabilitiesEvent"); }
++      virtual void handleDiscoverCapabilitiesReplyEvent(fhg::com::p2p::address_t const&, const DiscoverCapabilitiesReplyEvent*)
++      { throw std::runtime_error ("UNHANDLED EVENT: DiscoverCapabilitiesReplyEvent"); }
++
++
+       virtual void handleCancelJobAckEvent (fhg::com::p2p::address_t const&, const CancelJobAckEvent*)
+       { throw std::runtime_error ("UNHANDLED EVENT: CancelJobAck"); }
+       virtual void handleCancelJobEvent (fhg::com::p2p::address_t const&, const CancelJobEvent*)
+diff --git a/src/sdpa/events/events.hpp b/src/sdpa/events/events.hpp
+index 726ff76..fc98c1f 100644
+--- a/src/sdpa/events/events.hpp
++++ b/src/sdpa/events/events.hpp
+@@ -16,6 +16,9 @@
+ 
+ #pragma once
+ 
++#include <sdpa/events/DiscoverCapabilitiesEvent.hpp>
++#include <sdpa/events/DiscoverCapabilitiesReplyEvent.hpp>
++
+ #include <sdpa/events/DiscoverJobStatesEvent.hpp>
+ #include <sdpa/events/DiscoverJobStatesReplyEvent.hpp>
+ #include <sdpa/events/CancelJobAckEvent.hpp>
+diff --git a/src/sdpa/events/DiscoverCapabilitiesEvent.hpp b/src/sdpa/events/DiscoverCapabilitiesEvent.hpp
+new file mode 100644
+index 0000000..f2f71b7
+--- /dev/null
++++ b/src/sdpa/events/DiscoverCapabilitiesEvent.hpp
+@@ -0,0 +1,36 @@
++#pragma once
++
++#include <sdpa/events/MgmtEvent.hpp>
++
++namespace sdpa
++{
++  namespace events
++  {
++    class DiscoverCapabilitiesEvent : public sdpa::events::MgmtEvent
++    {
++    public:
++      typedef boost::shared_ptr<DiscoverCapabilitiesEvent> Ptr;
++
++      DiscoverCapabilitiesEvent ( )
++        : sdpa::events::MgmtEvent ()
++      {}
++
++      virtual void handleBy
++        (fhg::com::p2p::address_t const& source, EventHandler* handler) override
++      {
++        handler->handleDiscoverCapabilitiesEvent (source, this);
++      }
++    };
++
++    SAVE_CONSTRUCT_DATA_DEF (DiscoverCapabilitiesEvent, e)
++    {
++      SAVE_MGMTEVENT_CONSTRUCT_DATA (e);
++    }
++
++    LOAD_CONSTRUCT_DATA_DEF (DiscoverCapabilitiesEvent, e)
++    {
++      LOAD_MGMTEVENT_CONSTRUCT_DATA ();
++      ::new (e) DiscoverCapabilitiesEvent ();
++    }
++  }
++}
+diff --git a/src/sdpa/events/DiscoverCapabilitiesReplyEvent.hpp b/src/sdpa/events/DiscoverCapabilitiesReplyEvent.hpp
+new file mode 100644
+index 0000000..2e32549
+--- /dev/null
++++ b/src/sdpa/events/DiscoverCapabilitiesReplyEvent.hpp
+@@ -0,0 +1,49 @@
++#pragma once
++
++#include <sdpa/events/MgmtEvent.hpp>
++#include <sdpa/capability.hpp>
++#include <sstream>
++
++namespace sdpa
++{
++  namespace events
++  {
++    class DiscoverCapabilitiesReplyEvent : public MgmtEvent
++    {
++    public:
++      typedef boost::shared_ptr<DiscoverCapabilitiesReplyEvent> Ptr;
++
++      DiscoverCapabilitiesReplyEvent ( sdpa::capabilities_set_t cpbs )
++        : MgmtEvent()
++        , capabilities_(cpbs)
++      {}
++
++      virtual void handleBy
++        (fhg::com::p2p::address_t const& source, EventHandler* handler) override
++      {
++        handler->handleDiscoverCapabilitiesReplyEvent (source, this);
++      }
++
++      const sdpa::capabilities_set_t& capabilities() const
++      {
++        return capabilities_;
++      }
++
++    private:
++      sdpa::capabilities_set_t capabilities_;
++    };
++
++    SAVE_CONSTRUCT_DATA_DEF (DiscoverCapabilitiesReplyEvent, e)
++     {
++       SAVE_MGMTEVENT_CONSTRUCT_DATA (e);
++       SAVE_TO_ARCHIVE (e->capabilities());
++     }
++
++     LOAD_CONSTRUCT_DATA_DEF (DiscoverCapabilitiesReplyEvent, e)
++     {
++       LOAD_MGMTEVENT_CONSTRUCT_DATA();
++       LOAD_FROM_ARCHIVE (sdpa::capabilities_set_t, cpbs);
++       ::new (e) DiscoverCapabilitiesReplyEvent (cpbs);
++     }
++  }
++}

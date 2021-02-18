@@ -16,10 +16,10 @@ if client.get_job_status('count_words_job') == dart.job_status.unknown:
     'count_words')
   
 client.add_tasks('count_words_job', [
-  { 'location':'local_cluster', 'parameter': '/home/luca/test/test.txt'},
-  { 'location':'local_cluster', 'parameter': '/home/luca/test/test1.txt'},
-  { 'location':'local_cluster', 'parameter': '/home/luca/test/test2.txt'},
-  { 'location':'local_cluster', 'parameter': '/home/luca/test/test3.txt'}])
+  { 'location':'worker#name-:0', 'parameter': '/home/luca/test/test.txt'},
+  { 'location':'worker#name-:0', 'parameter': '/home/luca/test/test1.txt'},
+  { 'location':'worker#name-:0', 'parameter': '/home/luca/test/test2.txt'},
+  { 'location':'worker#name-:0', 'parameter': '/home/luca/test/test3.txt'}])
 
 time.sleep(4);
 

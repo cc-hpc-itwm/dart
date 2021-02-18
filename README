@@ -12,7 +12,7 @@ The docker images can be used to build manylinux variants of the dart-server and
 
 0) Clone this repository an cd in it
 
-1) Create a build environment image with `docker build -t dart_buildenv_x86_64 -f docker/Dockerfile-x86_64 .`
+1) Create a build environment image with `docker build -t dart_buildenv_x86_64 -f docker/Dockerfile-x86_64 docker`
   * This is going to need a long time, however this step is only required once
   
 2) Build dart inside the container

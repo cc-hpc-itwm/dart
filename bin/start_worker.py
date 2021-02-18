@@ -9,8 +9,8 @@ import dart
 # Get current directory of the current file
 current_dir = os.path.dirname(os.path.realpath(__file__))
 
-if len(sys.argv) < 2:
-  print("Usage {0} server_address [capabilities]")
+if len(sys.argv) < 3:
+  print("Usage {0} server_address name [capabilities]")
   sys.exit(0)
 
 client = dart.client(sys.argv[1], '000') # Change client key ?
@@ -25,8 +25,16 @@ worker_id = time.time()
 
 master = "agent-{0} {1} {2}-0%{0}%{1}".format(agent_host, agent_port, agent_pid)
 
-capabilities = ""
-for i in range(2, len(sys.argv)):
+capability_name = sys.argv[2]
+capability_name = capability_name.replace(":", ":0")
+capability_name = capability_name.replace("+", ":1")
+capability_name = capability_name.replace("#", ":2")
+capability_name = capability_name.replace(".", ":3")
+capability_name = capability_name.replace("-", ":4")
+capability_name = ":dartname::" + capability_name +"::"
+
+capabilities = capability_name
+for i in range(3, len(sys.argv)):
   if capabilities != "":
     capabilities = capabilities + " "
   capabilities = capabilities + sys.argv[i]
@@ -41,6 +49,10 @@ backlog_length = "1"
 library_dir = current_dir + "/../workflow/"
 
 # The command to start the worker
-cmd = kernel + " 1 --master \"" + master + "\" --library-search-path \"" + library_dir + "\" --capability \"" + capabilities + "\" -n \"" + name + "\" --backlog-length \"" + backlog_length + "\""
+cmd = kernel + " 1 --master \"" + master + "\" --library-search-path \"" + library_dir + "\"";
+cmd = cmd + " --capability \"" + capability_name + "\""
+for i in range(3, len(sys.argv)):
+  cmd = cmd + " --capability \"" + sys.argv[i] + "\""
+cmd = cmd + " -n \"" + name + "\" --backlog-length \"" + backlog_length + "\""
 
-os.system("{0} > /var/tmp/{1}.txt 2>&1 &".format(cmd, name))
+os.system("{0} > /var/tmp/{1}.txt 2>&1 &".format(cmd, name.replace(" ", "_")))

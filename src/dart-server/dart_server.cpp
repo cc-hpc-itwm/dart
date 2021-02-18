@@ -169,6 +169,7 @@ namespace
 
 dart_server::dart_server(net::io_pool& pool, const boost::property_tree::ptree& config, const installation& install)
 : http::server(pool, config.get<unsigned short>("port", 0), install.certs())
+, _hostname(config.get("hostname", boost::asio::ip::host_name()))
 , _install(install)
 , _signals(pool.get_service())
 , _router()
@@ -210,6 +211,7 @@ dart_server::dart_server(net::io_pool& pool, const boost::property_tree::ptree& 
       this->add_worker(client, message, symbols); // For now do not broadcast, later load balance
     });
   _router.add_resource("/worker/", "DELETE", broadcast_handler(delete_worker));
+  _router.add_resource("/worker/", "GET", broadcast_handler(get_worker));
 }
 
 /**
@@ -248,6 +250,7 @@ void dart_server::run()
     auto results = _gspc->fetch_available_results();
     for (auto& result : results)
       _storage->add_result(result);
+
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
 }
@@ -288,7 +291,7 @@ void dart_server::get_information(http::client* client, const rest::message& mes
   }
 
   boost::property_tree::ptree server_information;
-  server_information.put("host", boost::asio::ip::host_name());
+  server_information.put("host", _hostname);
   server_information.put("agent.host", _gspc->get_agent_host());
   server_information.put("agent.port", _gspc->get_agent_port());
 
@@ -662,6 +665,7 @@ void dart_server::add_worker(http::client* client, const rest::message& message,
   unsigned workers_per_host = message.content().get("workers_per_host", 1);
   std::vector<std::string> capabilities;
   unsigned shm_size = message.content().get("shm_size", 0);
+  std::string name = message.content().get("name", "");
 
   for (auto& iter : message.content().get_child("hosts"))
   {
@@ -680,7 +684,7 @@ void dart_server::add_worker(http::client* client, const rest::message& message,
 
   try
   {
-    std::string msg = "\n  hosts (";
+    std::string msg = "\n name(" + name + ") hosts (";
     for (auto& host : hosts) msg += host + ",";
     msg += "\n  capabilities (";
     for (auto& cap : capabilities) msg += cap + ",";
@@ -688,7 +692,8 @@ void dart_server::add_worker(http::client* client, const rest::message& message,
     msg += ")\n  workers_per_host (" + std::to_string(workers_per_host) + ")\n  "
       + "shm_size (" + std::to_string(shm_size) + ")";
     log_message::info("[dart_server::add_worker] " + msg);
-    _gspc->add_workers(hosts, workers_per_host, capabilities, shm_size);
+
+    _gspc->add_workers(name, hosts, workers_per_host, capabilities, shm_size);
   }
   catch (std::exception & exc)
   {
@@ -752,6 +757,67 @@ void dart_server::delete_worker(http::client* client, const rest::message& messa
   client->send_message(rest::message(http::status_code::OK_200));
 }
 
+void dart_server::get_worker(http::client* client, const rest::message& message, const rest::symbols&, const std::vector<rest::message>& responses)
+{
+  if (!is_authorized(client, message, authorization_level::client))
+  {
+    client->send_message(unauthorized());
+    return;
+  }
+
+  auto errors = extract_errors(responses);
+  if (errors.size() != 0)
+  {
+    // TODO better error treatment...
+    client->send_message(create_response(errors));
+    return;
+  }
+
+  decltype(_gspc->fetch_available_workers()) workers;
+  for (auto& res : responses)
+  {
+    for (auto worker : res.content().get_child("workers"))
+    {
+      auto& w = workers[worker.second.get("name", "")];
+      for (auto cap : worker.second.get_child("capabilities"))
+      {
+        if (cap.second.get("", "") != "")
+          w.capabilities.push_back(cap.second.get("", ""));
+      }
+      w.count += worker.second.get("count", 1u);
+    }
+  }
+
+  auto my_workers = _gspc->fetch_available_workers();
+  for (auto& worker : my_workers)
+  {
+    auto& w = workers[worker.first];
+    w.capabilities.insert(w.capabilities.end(), worker.second.capabilities.begin(), worker.second.capabilities.end());
+    w.count += worker.second.count;
+  }
+
+  boost::property_tree::ptree workers_content;
+  for (auto& worker : workers)
+  {
+    boost::property_tree::ptree worker_content;
+    worker_content.put("name", worker.first);
+    worker_content.put("count", worker.second.count);
+
+    boost::property_tree::ptree cpbs_content;
+    for (auto& cpb : worker.second.capabilities)
+    {
+      cpbs_content.push_back({ "", boost::property_tree::ptree(cpb) });
+    }
+
+    worker_content.put_child("capabilities", cpbs_content);
+
+    workers_content.push_back({ "", worker_content });
+  }
+  boost::property_tree::ptree content;
+  content.add_child("workers", workers_content);
+  
+  client->send_message(rest::message(http::status_code::OK_200, content));
+}
 
 bool dart_server::is_authorized(http::client* client, const rest::message& request, authorization_level level)
 {
