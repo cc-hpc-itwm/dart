@@ -84,6 +84,23 @@ class client:
     if r.status_code != requests.codes.ok:
       raise Exception('response not ok')
 
+
+  ##
+  # Get workers
+  #
+  # @param hosts            list of all the hosts
+  # @param workers_per_host the amount of workers to add per host
+  # @param name             the name of the worker
+  # @param capabilities     list of the capabilities of the workers
+  # @param shm_size         shared memory size
+  def get_workers(self):
+    r = requests.get(self.server + "/worker/", json={
+          'key': self.key
+      }, verify=False)
+    if r.status_code != requests.codes.ok:
+      raise Exception('response not ok')
+    return json.loads(r.content)
+
   ##
   # Adds a job definition
   #
