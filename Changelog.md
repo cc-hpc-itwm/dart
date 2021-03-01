@@ -1,3 +1,9 @@
+# 2021-03-01
+## Fixed
+   - Fixed a bug while reading http packages
+## Added
+   - Added `unbundle.sh` script which checks if there are 'newer' system .so's installed (by checking GLIBC and GLIBCXX) strings. This is necessary as sometimes the .so's that are loaded by python require newer libc versions. This feature is experimental.
+
 # 2021-02-11
 ## Added
    - Patch for gpispace to get capabilities

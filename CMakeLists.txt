@@ -222,6 +222,11 @@ install (DIRECTORY
   DESTINATION .
 )
 
+install (FILES
+  "${CMAKE_SOURCE_DIR}/unbundle.sh"
+  DESTINATION .
+)
+
 #install (FILES
 #  "${CMAKE_SOURCE_DIR}/example/dart_task.py"
 #  "${CMAKE_SOURCE_DIR}/src/python/dart.py"

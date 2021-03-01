@@ -118,8 +118,7 @@ bool message_builder::read_message_body()
   while (content_length)
   {
     auto& data = _data_queue.front();
-
-    if (data.size() >= content_length)
+    if (data.size() <= content_length)
     {
       // use the whole buffer
       content.insert(content.end(), data.begin(), data.end());
@@ -134,7 +133,6 @@ bool message_builder::read_message_body()
       content_length = 0;
     }
   }
-
   _current_message.set_body(std::move(content));
 
   return true;
