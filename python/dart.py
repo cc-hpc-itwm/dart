@@ -7,20 +7,6 @@ class job_status(Enum):
   running = 1
   stopped = 2
 
-#class catch_stderr:
-#  def __init__(self):
-#    self.value = ''
-#  def write (self, txt):
-#    self.value += txt
-#catch_stderr = catch_stderr()
-
-#class catch_stdout:
-#  def __init__(self):
-#    self.value = ''
-#  def write (self, txt):
-#    self.value += txt
-#catch_stdout = catch_stdout()
-
 class client:
   ##
   # Initializes the client
@@ -60,7 +46,8 @@ class client:
   # @param name             the name of the worker
   # @param capabilities     list of the capabilities of the workers
   # @param shm_size         shared memory size
-  def add_workers(self, hosts, workers_per_host, name, capabilities, shm_size):
+  # @param ssh_options      an object with the following attributes { "username": "...", "port": "...", "public-key": "...", "private-key": "..." }
+  def add_workers(self, hosts, workers_per_host, name, capabilities, shm_size, ssh = {}):
     r = requests.post(self.server + "/worker/", json={
           'key': self.key
         , 'name': name
@@ -68,6 +55,7 @@ class client:
         , 'workers_per_host': workers_per_host
         , 'capabilities': capabilities
         , 'shm_size': shm_size
+        , 'ssh': ssh
       }, verify=False)
     if r.status_code != requests.codes.ok:
       raise Exception('response not ok')
@@ -76,10 +64,12 @@ class client:
   # Removes workers from the specified hosts
   #
   # @param hosts a list of hosts
-  def remove_workers(self, hosts):
+  # @param ssh_options      an object with the following attributes { "username": "...", "port": "...", "public-key": "...", "private-key": "..." }
+  def remove_workers(self, hosts, ssh = {}):
     r = requests.delete(self.server + "/worker/", json={
           'key': self.key
         , 'hosts': hosts
+        , 'ssh': ssh
       }, verify=False)
     if r.status_code != requests.codes.ok:
       raise Exception('response not ok')

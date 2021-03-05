@@ -681,6 +681,11 @@ void dart_server::add_worker(http::client* client, const rest::message& message,
       capabilities.push_back(capability);
   }
 
+  ssh_options ssh;
+  ssh.username = message.content().get("ssh.username", "");
+  ssh.port = message.content().get_optional<unsigned short>("ssh.port");
+  ssh.public_key = message.content().get("ssh.public_key", "");
+  ssh.private_key = message.content().get("ssh.private_key", "");
 
   try
   {
@@ -693,7 +698,7 @@ void dart_server::add_worker(http::client* client, const rest::message& message,
       + "shm_size (" + std::to_string(shm_size) + ")";
     log_message::info("[dart_server::add_worker] " + msg);
 
-    _gspc->add_workers(name, hosts, workers_per_host, capabilities, shm_size);
+    _gspc->add_workers(name, hosts, workers_per_host, capabilities, shm_size, ssh);
   }
   catch (std::exception & exc)
   {
@@ -735,13 +740,19 @@ void dart_server::delete_worker(http::client* client, const rest::message& messa
       hosts.push_back(host);
   }
 
+  ssh_options ssh;
+  ssh.username = message.content().get("ssh.username", "");
+  ssh.port = message.content().get_optional<unsigned short>("ssh.port");
+  ssh.public_key = message.content().get("ssh.public_key", "");
+  ssh.private_key = message.content().get("ssh.private_key", "");
+
   try
   {
     std::string msg = "\n  hosts (";
     for (auto& host : hosts) msg += host + ",";
     msg += ")";
     log_message::info("[dart_server::delete_worker] " + msg);
-    _gspc->remove_workers(hosts);
+    _gspc->remove_workers(hosts, ssh);
   }
   catch (std::exception & exc)
   {
@@ -782,7 +793,7 @@ void dart_server::get_worker(http::client* client, const rest::message& message,
       for (auto cap : worker.second.get_child("capabilities"))
       {
         if (cap.second.get("", "") != "")
-          w.capabilities.push_back(cap.second.get("", ""));
+          w.capabilities.insert(cap.second.get("", ""));
       }
       w.count += worker.second.get("count", 1u);
     }
@@ -792,7 +803,7 @@ void dart_server::get_worker(http::client* client, const rest::message& message,
   for (auto& worker : my_workers)
   {
     auto& w = workers[worker.first];
-    w.capabilities.insert(w.capabilities.end(), worker.second.capabilities.begin(), worker.second.capabilities.end());
+    w.capabilities.insert(worker.second.capabilities.begin(), worker.second.capabilities.end());
     w.count += worker.second.count;
   }
 

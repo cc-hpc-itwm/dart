@@ -129,7 +129,8 @@ namespace
 }
 
 gspc_interface::gspc_interface(const installation& install, const boost::property_tree::ptree& config)
-: _vm(create_vm(install, config))
+: _dart_install(install)
+, _vm(create_vm(install, config))
 , _workflow(install.workflow())
 , _stop_workers(install.stop_workers_script())
 , _installation(_vm)
@@ -179,13 +180,23 @@ gspc_interface::~gspc_interface()
 }
 
 void gspc_interface::add_workers(const std::string& name, const std::vector<std::string>& hosts, unsigned workers_per_host,
-  const std::vector<std::string>& capabilities, unsigned shm_size)
+  const std::vector<std::string>& capabilities, unsigned shm_size, const ssh_options& ssh)
 {
   log_message::info("[gspc_interface::add_workers] starting rifd");
-  
+ 
+  boost::property_tree::ptree config;
+
+  if (ssh.port)              config.put("gspc.ssh_port", ssh.port.get());
+  if (ssh.username != "")    config.put("gspc.ssh_username", ssh.username);
+  if (ssh.public_key != "")  config.put("gspc.ssh_public_key", ssh.public_key);
+  if (ssh.private_key != "") config.put("gspc.ssh_private_key", ssh.private_key);
+
+
+  auto vm = create_vm(_dart_install, config);
+
   // Starting rifds on remote workers
-  gspc::rifd::strategy strategy(_vm);
-  gspc::rifd::port port(_vm);
+  gspc::rifd::strategy strategy(vm);
+  gspc::rifd::port port(vm);
   gspc::rifds rifds(strategy, port, _installation);
 
   // and bootstrapping them
@@ -242,12 +253,22 @@ void gspc_interface::add_workers(const std::string& name, const std::vector<std:
   rifds.teardown();
 }
   
-void gspc_interface::remove_workers(const std::vector<std::string>& hosts)
+void gspc_interface::remove_workers(const std::vector<std::string>& hosts, const ssh_options& ssh)
 {
   // Starting rifds on remote workers
   log_message::info("[gspc_interface::remove_workers] starting rifds");
-  gspc::rifd::strategy strategy(_vm);
-  gspc::rifd::port port(_vm);
+
+  boost::property_tree::ptree config;
+
+  if (ssh.port)              config.put("gspc.ssh_port", ssh.port.get());
+  if (ssh.username != "")    config.put("gspc.ssh_username", ssh.username);
+  if (ssh.public_key != "")  config.put("gspc.ssh_public_key", ssh.public_key);
+  if (ssh.private_key != "") config.put("gspc.ssh_private_key", ssh.private_key);
+
+  auto vm = create_vm(_dart_install, config);
+
+  gspc::rifd::strategy strategy(vm);
+  gspc::rifd::port port(vm);
   gspc::rifds rifds(strategy, port, _installation);
 
   // and bootstrapping them
@@ -337,7 +358,7 @@ std::unordered_map<std::string, worker> gspc_interface::fetch_available_workers(
   for (auto& pair : gspcname_capability)
   {
     std::string drts_name = "";
-    std::vector<std::string> capabilities;
+    std::unordered_set<std::string> capabilities;
     capabilities.reserve(std::max(static_cast<std::size_t>(1), pair.second.size()) - 1);
     for (auto& capability : pair.second)
     {
@@ -347,11 +368,11 @@ std::unordered_map<std::string, worker> gspc_interface::fetch_available_workers(
         drts_name = name.get();
         continue;
       }
-      capabilities.emplace_back(capability.name);
+      capabilities.insert(capability.name);
     }
     auto& w = workers[drts_name];
     w.count += 1;
-    w.capabilities.insert(w.capabilities.end(), capabilities.begin(), capabilities.end());
+    w.capabilities.insert(capabilities.begin(), capabilities.end());
   }
 
   return workers;
@@ -426,17 +447,18 @@ std::vector<result> gspc_interface::fetch_available_results()
         pnet::type::value::value_type response(client.synchronous_workflow_response
           (job, "get_next_task_result", pnetc::type::task_result::to_value(task_result)));
         task_result = pnetc::type::task_result::from_value(response);
-        
-        results.push_back(result{
-            iter->first,
-            task_result.worker,
-            task_result.host,
-            task_result.location,
-            task_result.start_time,
-            task_result.duration,
-            task_result.error,
-            task_result.success.to_string()
-          });
+
+        result r;
+        r.job = iter->first;
+        r.host = task_result.host;
+        r.worker = task_result.worker;
+        r.location = task_result.location;
+        r.start_time = task_result.start_time;
+        r.duration = task_result.duration;
+        r.error = task_result.error;
+        r.success = task_result.success.to_string();
+
+        results.push_back(std::move(r));
       }
       catch (std::runtime_error & err)
       {

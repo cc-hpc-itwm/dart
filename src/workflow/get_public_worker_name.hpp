@@ -20,7 +20,7 @@ namespace dart
     auto index = string.find(":dartname::");
     auto end = string.find("::", index + 11);
 
-    auto name = string.substr(index + 11, (string.size() - end - index));
+    auto name = string.substr(index + 11, (end - index - 11));
     replace_substr(name, ":4", "-");
     replace_substr(name, ":3", ".");
     replace_substr(name, ":2", "#");

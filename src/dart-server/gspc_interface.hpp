@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <boost/optional/optional.hpp>
@@ -20,8 +21,16 @@
 
 struct worker
 {
-  std::vector<std::string> capabilities;
+  std::unordered_set<std::string> capabilities;
   unsigned count = 0;
+};
+
+struct ssh_options
+{
+  std::string username;
+  boost::optional<unsigned short> port;
+  std::string public_key;
+  std::string private_key;
 };
 
 class gspc_interface final
@@ -31,8 +40,8 @@ public:
   ~gspc_interface();
 
   void add_workers(const std::string& name, const std::vector<std::string>& hosts, unsigned workers_per_host, 
-    const std::vector<std::string>& capabilities, unsigned shm_size);
-  void remove_workers(const std::vector<std::string>& hosts);
+    const std::vector<std::string>& capabilities, unsigned shm_size, const ssh_options& ssh);
+  void remove_workers(const std::vector<std::string>& hosts, const ssh_options& ssh);
 
   std::unordered_map<std::string, worker> fetch_available_workers();
 
@@ -47,6 +56,7 @@ public:
   inline auto& get_agent_port() const noexcept { return _agent_port; }
 
 private:
+  installation _dart_install;
   boost::program_options::variables_map _vm;
   boost::filesystem::path _workflow;
   boost::filesystem::path _stop_workers;

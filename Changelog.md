@@ -1,3 +1,14 @@
+# 2021-03-05
+## Fixed
+   - Fixed a bug while resolving worker names
+   - Fixed a bug where sometimes worker name and host have been interchanged
+## Added
+   - ssh options when adding workers.
+## Changed
+   - Internally capabilities are now stored in a set, therefore there are no more duplicates.
+## API Changes
+   - add_worker, remove_worker now support an optional ssh parameter, see `python/ydart.py` for details
+
 # 2021-03-01
 ## Fixed
    - Fixed a bug while reading http packages
