@@ -7,6 +7,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+/**
+* Determines the root folder for the installation from
+* the install location of the server executable.
+*
+* Checks if all required files can be found, if not throws
+* an error.
+*/
 installation::installation()
 : _home(boost::filesystem::canonical(boost::filesystem::path("/") 
   / "proc"
@@ -16,6 +23,9 @@ installation::installation()
   check_install();
 }
 
+/**
+* Checks and sets the install location to the given path.
+*/
 installation::installation(const boost::filesystem::path& path)
 : _home(path)
 {

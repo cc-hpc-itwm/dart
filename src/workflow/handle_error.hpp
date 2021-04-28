@@ -4,6 +4,9 @@
 #include <utility>
 #include <vector>
 
+/**
+* Handles a python error.
+*/
 std::pair<std::string, std::vector<char>> handle_error()
 {
   PyObject *pytype, *pyvalue, *pytraceback;

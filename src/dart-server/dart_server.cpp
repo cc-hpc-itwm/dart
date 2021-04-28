@@ -238,6 +238,13 @@ void dart_server::handle_message(http::client* client, const http::message& mess
   }
 }
 
+/**
+* Runs the dart server.
+*
+* In the threads of the given io_pool the incoming and outgoing messages gets handled.
+* The main thread continuously pulls the latest gpispace results and saves them in the
+* job_storage.
+*/
 void dart_server::run()
 {
   _should_shutdown.store(false);

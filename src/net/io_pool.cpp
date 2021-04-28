@@ -5,6 +5,11 @@
 
 using namespace net;
 
+/**
+* Creates an io pool of the given size.
+*
+* @param pool_size the size of the pool
+*/
 io_pool::io_pool(size_t pool_size)
 {
   if (pool_size == 0)
@@ -19,6 +24,10 @@ io_pool::io_pool(size_t pool_size)
   }
 }
 
+/**
+* Starts all the services in the io pool so that they are
+* ready to handle io requests.
+*/
 void io_pool::run()
 {
   _threads.reserve(_services.size());
@@ -44,12 +53,22 @@ void io_pool::run()
       }));
 }
 
+/**
+* Waits until all services have exited.
+*
+* Blocking call!
+*/
 void io_pool::wait()
 {
   for (auto& thread : _threads)
     thread.join();
 }
 
+/**
+* Sends a stop command and afterwards waits.
+*
+* Blocking call!
+*/
 void io_pool::stop_and_wait()
 {
   for (auto& service : _services)
@@ -59,6 +78,13 @@ void io_pool::stop_and_wait()
     thread.join();
 }
 
+/**
+* Gets the next service that should be used.
+*
+* Services get returned in a Round-Robin fashion.
+*
+* @return the service
+*/
 net::io_service& io_pool::get_service() noexcept
 {
   auto i = _next;

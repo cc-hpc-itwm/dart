@@ -23,6 +23,11 @@ namespace dart
     std::string output_directory;//!< The output directory
   } worker_config;
 
+  /**
+  * Loads the worker config file.
+  *
+  * Yields early, if the config has already once been loaded.
+  */
   static void load_worker_config(const std::string& internal_name)
   {
     if (already_loaded)

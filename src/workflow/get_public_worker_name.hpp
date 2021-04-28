@@ -5,6 +5,9 @@
 
 namespace dart
 {
+  /**
+  * A helper function to replace all substrings in a string by the given replacement.
+  */
   void replace_substr(std::string& base, const std::string& substr, const std::string& replacement)
   {
     std::size_t index = 0;
@@ -15,6 +18,23 @@ namespace dart
     }
   }
 
+  /**
+  * Checks if the a given string is the name of the worker.
+  *
+  * Note that the worker names use the following encoding:
+  *  Let <name> be the name of the worker, then it receives the prefix
+  *  ":dartname::" and the postfix "::". Afterwards, the following symbols
+  *  get replaces:
+  *    1) : by :0
+  *    2) + by :1
+  *    3) # by :2
+  *    4) . by :3
+  *    5) - by :4
+  *  This is necessary because gpispace alters the names and we want to recover
+  *  the original name.
+  *
+  * @return returns the converted name or an empty string.
+  */
   std::string get_dartname(const std::string& string)
   {
     auto index = string.find(":dartname::");
@@ -29,6 +49,14 @@ namespace dart
     return name;
   }
 
+  /**
+  * Tries to convert the internal gpispace worker name to the
+  * name under which the worker was registered. First tries the
+  * dart way, if unsuccessful constructs a best bet.
+  *
+  * @param internal_worker_name the internal worker name
+  * @return the worker name
+  */
   std::string get_public_worker_name
     (std::string const& internal_worker_name)
   {

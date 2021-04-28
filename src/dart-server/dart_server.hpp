@@ -48,6 +48,13 @@ public:
   */
   virtual void handle_message(http::client* client, const http::message& message) override;
 
+  /**
+  * Runs the dart server.
+  *
+  * In the threads of the given io_pool the incoming and outgoing messages gets handled.
+  * The main thread continuously pulls the latest gpispace results and saves them in the
+  * job_storage.
+  */
   void run();
 
   void shutdown(http::client* client, const rest::message& message, const rest::symbols& symbols, const std::vector<rest::message>& peer_responses);

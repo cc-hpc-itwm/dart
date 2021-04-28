@@ -5,16 +5,40 @@
 
 namespace http
 {
+  /**
+  * Constructs and parses http versions.
+  */
   class version final
   {
   public:
+    /**
+    * Default Constructor.
+    *
+    * The http version is 1.1
+    */
     version() = default;
+
+    /**
+    * Constructs an http version from a major and minor number.
+    *
+    * The http version will be "[major].[minor]".
+    *
+    * @param major the major
+    * @param minor the minor
+    */
     version(unsigned major, unsigned minor)
     : _major(major)
     , _minor(minor)
     {
     }
 
+    /**
+    * Constructs an http version from a string.
+    *
+    * Atm only "HTTP/1.1" and "HTTP/1.0" are allowed.
+    *
+    * @param version the version string.
+    */
     explicit version(const std::string& version)
     {
       if (version == "HTTP/1.1")
@@ -37,6 +61,11 @@ namespace http
 
     ~version() = default;
 
+    /**
+    * Converts the major and minor numbers to a version string.
+    *
+    * @return the version string.
+    */
     std::string to_string() const
     { 
       return "HTTP/" + std::to_string(_major) + "." + std::to_string(_minor); 
