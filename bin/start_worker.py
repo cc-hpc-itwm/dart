@@ -13,7 +13,8 @@ if len(sys.argv) < 3:
   print("Usage {0} server_address name [capabilities]")
   sys.exit(0)
 
-client = dart.client(sys.argv[1], '000') # Change client key ?
+kernel_port = sys.argv[1]
+client = dart.client(sys.argv[2], '000') # Change client key ?
 
 info = client.get_server_information()
 
@@ -25,7 +26,7 @@ worker_id = time.time()
 
 master = "agent-{0} {1} {2}-0%{0}%{1}".format(agent_host, agent_port, agent_pid)
 
-capability_name = sys.argv[2]
+capability_name = sys.argv[3]
 capability_name = capability_name.replace(":", ":0")
 capability_name = capability_name.replace("+", ":1")
 capability_name = capability_name.replace("#", ":2")
@@ -34,7 +35,7 @@ capability_name = capability_name.replace("-", ":4")
 capability_name = ":dartname::" + capability_name +"::"
 
 capabilities = capability_name
-for i in range(3, len(sys.argv)):
+for i in range(4, len(sys.argv)):
   if capabilities != "":
     capabilities = capabilities + " "
   capabilities = capabilities + sys.argv[i]
@@ -51,7 +52,8 @@ library_dir = current_dir + "/../workflow/"
 # The command to start the worker
 cmd = kernel + " 1 --master \"" + master + "\" --library-search-path \"" + library_dir + "\"";
 cmd = cmd + " --capability \"" + capability_name + "\""
-for i in range(3, len(sys.argv)):
+cmd = cmd + " --port \"" + kernel_port + "\""
+for i in range(4, len(sys.argv)):
   cmd = cmd + " --capability \"" + sys.argv[i] + "\""
 cmd = cmd + " -n \"" + name + "\" --backlog-length \"" + backlog_length + "\""
 

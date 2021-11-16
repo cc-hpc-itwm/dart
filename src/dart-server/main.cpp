@@ -41,12 +41,13 @@ int main(int argc, char* argv[])
     desc.add_options()
       ("help", "produces help message")
       ("port", po::value<unsigned short>(&port)->default_value(7777), "sets the port")
+      ("agent-port", po::value<std::string>(&hostname)->default_value(""), "sets the agent port")
       ("hostname", po::value<std::string>(&hostname)->default_value(""), "sets the hostname, if empty the server tries to resolve it")
       ("io-pool-size", po::value<size_t>(&pool_size)->default_value(1), "number of threads in io pool")
-      ("ssh-private-key", po::value<std::string>(), "ssh private key for gpispace")
-      ("ssh-public-key", po::value<std::string>(), "ssh public key for gpispace")
-      ("ssh-username", po::value<std::string>(), "ssh username for gpispace")
-      ("ssh-port", po::value<std::string>(), "ssh port for gpispace")
+      ("gspc-ssh-private-key", po::value<std::string>(), "ssh private key for gpispace")
+      ("gspc-ssh-public-key", po::value<std::string>(), "ssh public key for gpispace")
+      ("gspc-ssh-username", po::value<std::string>(), "ssh username for gpispace")
+      ("gspc-ssh-port", po::value<std::string>(), "ssh port for gpispace")
       ;
 
     po::variables_map vm;
@@ -68,6 +69,7 @@ int main(int argc, char* argv[])
     if (vm.count("gspc-ssh-public-key")) config.put("gspc.ssh_public_key", vm["gspc-ssh-public-key"].as<std::string>());
     if (vm.count("gspc-ssh-username")) config.put("gspc.ssh_username", vm["gspc-ssh-username"].as<std::string>());
     if (vm.count("gspc-ssh-port")) config.put("gspc.ssh_port", vm["gspc-ssh-port"].as<std::string>());
+    if (vm.count("agent-port")) config.put("agent-port", vm["agent-port"].as<std::string>());
 
 
     dart_server server(pool, config, installation());

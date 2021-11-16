@@ -43,7 +43,11 @@ namespace
     arr_opt.push_back("");
 
     arr_opt.push_back("--worker-env-copy-current");
-
+    if (config.get("agent-port", "") != "")
+    {
+      std::string agent_port("--agent-port=" + config.get("agent-port", ""));
+      arr_opt.push_back(agent_port);
+    }
     std::string rif_strategy = config.get("gspc.rif_strategy", "ssh");
     arr_opt.push_back("--rif-strategy");
     arr_opt.push_back(rif_strategy);
@@ -79,7 +83,6 @@ namespace
       arr_opt.push_back("--rif-strategy-parameters");
       arr_opt.push_back(ssh_port);
     }
-
     boost::program_options::store
     (boost::program_options::command_line_parser(arr_opt).options(desc).run(), vm);
 
@@ -178,13 +181,15 @@ gspc_interface::gspc_interface(const installation& install, const boost::propert
   ? gspc::Certificates(config.get("gspc.certificates_dir", ""))
   : boost::none)
 {
+  /*auto const _vm_new (_vm);*/
+  /*unsigned short const agent_port = 1234;*/
   _master_rifd = std::make_unique<gspc::scoped_rifd>(
       gspc::rifd::strategy(_vm)
     , gspc::rifd::hostname(boost::asio::ip::host_name())
     , gspc::rifd::port(_vm)
     , _installation
     );
-
+  /*gspc::set_agent_port(_vm_new, agent_port);*/
   _drts = std::make_unique<gspc::scoped_runtime_system>(
         _vm
       , _installation
